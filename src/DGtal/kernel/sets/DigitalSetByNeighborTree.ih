@@ -1,0 +1,132 @@
+
+/**
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Lesser General Public License as
+ *  published by the Free Software Foundation, either version 3 of the
+ *  License, or  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ **/
+
+/**
+ * @file DigitalSetByNeighborTree.ih
+ * @author Xavier Provençal (\c xavier.provencalniv-savoie.fr )
+ * Laboratoire de Mathématiques (CNRS, UMR 5807), Universitée de Savoie, France
+ *
+ * @date 21/12/2012
+ *
+ * Implementation of inline methods defined in DigitalSetByNeighborTree.h
+ *
+ * This file is part of the DGtal library.
+ */
+
+
+//////////////////////////////////////////////////////////////////////////////
+// #include <cstdlib>
+//////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////
+// IMPLEMENTATION of inline methods.
+///////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////
+// ----------------------- Subclass tree ------------------------------
+
+template <typename Domain>
+inline
+DGtal::DigitalSetByNeighborTree<Domain>::Tree::Tree()
+{
+  int max = NB_SONS;
+  for ( unsigned int i=0; i<max; ++i ) 
+    {
+      roots[ i ].father = &roots[ i ];
+      visited = false;
+      for ( int i=0; i<NB_SONS; ++i )
+        sons[i] = NULL;
+      for ( int i=0; i<NB_NEIGHBORS; ++i )
+        neighbors[i] = NULL;
+      sons[ i ] = &roots[ i ];
+    }
+
+  //Link the roots togheter
+  for ( int i=0; i<max; ++i ) {
+      Son s(i);
+      for ( unsigned int j=0; j<d; ++j ) {
+          int bit = s.bitValue(j);
+          s.flipBit(j);
+          if (!bit) 
+            roots[i]->neighbors[(2*j)+1] = roots[s.intValue()];
+          else
+            roots[i]->neighbors[2*j] = roots[s.intValue()];
+          s.flipBit(j);
+      }
+  }
+
+  //Start at origin
+  active = roots[0];
+  active->setVisited(true);
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+// ----------------------- Standard services ------------------------------
+
+/**
+ * Destructor.
+ */
+template <typename Domain>
+inline
+DGtal::DigitalSetByNeighborTree<Domain>::~DigitalSetByNeighborTree()
+{
+  std::cout << "Destruction ! " << std::endl;
+}
+
+/**
+ * Constructor.
+ * Creates the empty set in the domain [d].
+ *
+ * @param d any domain.
+ */
+template <typename Domain>
+inline
+DGtal::DigitalSetByNeighborTree<Domain>::
+DigitalSetByNeighborTree( const Domain & d )
+  : myDomain( d ), myTree()
+{
+}
+
+/**
+ * Copy constructor.
+ * @param other the object to clone.
+ */
+template <typename Domain>
+inline
+DGtal::DigitalSetByNeighborTree<Domain>::
+DigitalSetByNeighborTree( const DigitalSetByNeighborTree<Domain> & other )
+  : myDomain( other.myDomain ), myTree ( other.myTree  )
+{
+}
+
+/**
+ * Assignment.
+ * @param other the object to copy.
+ * @return a reference on 'this'.
+ */
+template <typename Domain>
+inline
+DGtal::DigitalSetByNeighborTree<Domain> &
+DGtal::DigitalSetByNeighborTree<Domain>::operator= ( const DigitalSetByNeighborTree<Domain> & other )
+{
+  ASSERT( ( myDomain.lowerBound() <= other.myDomain.lowerBound() )
+    && ( myDomain.upperBound() >= other.myDomain.upperBound() )
+    && "This domain should include the domain of the other set in case of assignment." );
+  myTree  = other.myTree ;
+  return *this;
+}
