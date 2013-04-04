@@ -63,7 +63,7 @@ namespace DGtal
    * It thus describes a modifiable set of points within the given
    * domain [Domain].
    *
-   * @tparam Domain a realization of the concept CDomain.
+   * @tparam TDomain a realization of the concept CDomain.
    * @see CDigitalSet,CDomain
    */
   template <typename TDomain>
@@ -245,6 +245,15 @@ namespace DGtal
      */
     DigitalSetBySTLVector<Domain> & operator+=
     ( const DigitalSetBySTLVector<Domain> & aSet );
+
+    // ----------------------- Model of CPointPredicate -----------------------------
+  public:
+
+    /**
+       @param p any point.
+       @return 'true' if and only if \a p belongs to this set.
+    */
+    bool operator()( const Point & p ) const;
 
     // ----------------------- Other Set services -----------------------------
   public:

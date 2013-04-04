@@ -111,10 +111,12 @@ namespace DGtal
     typedef typename Domain::Dimension Dimension;
     typedef Point Vertex;
 
-    typedef CountedPtr<const Domain> DomainPtr;    
+    // Pointer to the (const) Domain given at construction.
+    typedef const Domain * DomainPtr;
+
 
     /// static constants
-    static const typename Domain::Dimension dimension = Domain::dimension;
+    static const typename Domain::Dimension dimension = Domain::Space::dimension;
 
     /// range of values
     BOOST_CONCEPT_ASSERT(( CLabel<TValue> ));
@@ -238,14 +240,11 @@ namespace DGtal
     typedef typename std::map<Point,Value>::reverse_iterator ReverseIterator;
     typedef typename std::map<Point,Value>::const_reverse_iterator ConstReverseIterator;
     
-    /** 
-     * Construct a Iterator on the image at a position specified
-     * by @c aPoint
+    /**
+     * Construct a Iterator on the image 
+     *
      * 
-     * @param aPoint a point to construct a Iterator on. 
-     * 
-     * @return a Iterator on @c aPoint
-     */
+     * @return a Iterator      */
     OutputIterator outputIterator();
 
         
