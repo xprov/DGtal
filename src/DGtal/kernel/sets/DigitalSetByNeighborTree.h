@@ -39,11 +39,14 @@
 //////////////////////////////////////////////////////////////////////////////
 // Inclusions
 #include "DGtal/base/Common.h"
+#include <iostream>
+#include <vector>
 //////////////////////////////////////////////////////////////////////////////
 
 
-#define NB_SONS POWER<2, Space::dimension >::RET
-#define NB_NEIGHBORS 2 * Space::dimension
+// #define D Space::dimension
+// #define NB_SONS DigitalSetByNeighborTree<Domain>::POWER< 2, Space::dimension >::RET
+// #define NB_NEIGHBORS ( 2 * Space::dimension )
 
 namespace DGtal
 {
@@ -90,7 +93,7 @@ namespace DGtal
 
     // ---------------------- New types definition ---------------------------
 
-  private:
+  public:
 
 
 
@@ -108,20 +111,222 @@ namespace DGtal
           enum { RET = 1 };
         };
 
-    struct SNode
-      {
-        struct SNode * father;
-        struct SNode * sons[ NB_SONS ];
-        struct SNode * neighbors[ NB_NEIGHBORS ];
-      };
-    typedef struct SNode Node;
+    class Node;
+    class Root;
+    class Direction;
+    class TypeOfSon;
 
     class Tree 
     {
+
+      // ---------------------- New types definition ---------------------------
+
     public :
       Tree();
-      Node roots[ NB_SONS ];
+
+      Node * findNeighbor( Node * n, Direction d );
+
+      /**
+       * Returns the adress of a given son of the node. In the case where such a
+       * node does not exist yet, a new node is created and added to the sons.
+       *
+       * @param father the father node.
+       * @param type the tyde of the requested son.
+       */
+      Node * getSon( Node * father, TypeOfSon type );
+
+      // In order to represent a d dimensional space, a tree with 2^d roots is
+      // built. More precisely, we build one tree per hyper-octant but we link
+      // all the roots together in order to have a single tree.
+      Root roots[ DigitalSetByNeighborTree::nb_sons ];
+      void selfDisplay( std::ostream & out, int indent = 0 ) const;
+
+      // Nodes are allocated by the tree and stored in recondary structure.
+      std::vector<Node * > myNodes;
+
     };
+
+
+    /**
+     * A node may have up do 2^d sons. In order to identify the sons a node,
+     * each of them is designated by a list of bits. These bits allows to compute
+     * de coordinates of the son from the coordinates of its father.
+     *
+     * Let 'S' be a son the son of type 'b = b_1b_2...b_d' of the node 'F'. Let '(x_1, x_2,
+     * ..., x_d )' be the coordinates of 'F', then the i-th coordinate of 'S' is
+     * '2*x_i + b_i'.
+     *
+     * These lists of bits are stored using a single instance of 'unsigned int'
+     * which limits the dimension of the Domain to 32.
+     */
+    class TypeOfSon
+      {
+    public :
+        TypeOfSon() : type(0) {}
+        TypeOfSon( unsigned int aType ) : type(aType) {}
+        TypeOfSon( const TypeOfSon &other ) : type( other.type ) {}
+        ~TypeOfSon(){}
+        TypeOfSon & operator=( const TypeOfSon & other ) 
+          {
+            type = other.type;
+            return *this;
+          }
+        bool operator==( const TypeOfSon & other ) const
+          {
+            return type == other.type;
+          }
+        bool operator!=( const TypeOfSon & other ) const
+          {
+            return type != other.type;
+          }
+
+        unsigned intValue() const
+          {
+            return type;
+          }
+
+        // Returns the value of the n-th bit
+        bool getBit( int n ) const
+          {
+            return ( type & ( 1 << ( D - n - 1 ) ) );
+          }
+
+        // Flips the value of the n-th bit
+        void flipBit( int n )
+          {
+            type ^= ( 1 << ( D - n - 1 ) );
+          }
+
+          
+        void selfDisplay( std::ostream & out, int indent = 0 ) const;
+
+    public :
+        unsigned int type;
+      };
+
+    /**
+     * A Direction is an elementary step in the digital space. In other words, a
+     * vector of the form +/- e_i. These steps are conviniently described unsing
+     * a signed int.
+     *
+     * Class Direction defines a bijection between directions and {0, 1, ...,
+     * 2^d-1} that is used to index the ``neighbors`` array in the node
+     * structure.
+     *
+     * This bijection sums un to order the neighbors in the following way :
+     * e_1, -e_1, e_2, -e_2, ..., e_d, -e_d.
+     */
+    class Direction 
+      {
+    public :
+        Direction( int dir ) : d( dir ) {}
+        ~Direction() {}
+        int intValue() const
+          {
+            return (d>0) ? (d-1)*2 : (-2*d)-1;
+          }
+        int axis( ) const 
+          {
+            return intValue()/2;
+          }
+        bool positive() const 
+          {
+            return d>0;
+          }
+        bool negative() const 
+          {
+            return d<0;
+          }
+        int d;
+      };
+
+    /**
+     * The tree structure that is built here is a radix-tree that encodes the
+     * coordinates of the points in the digital set, bit per bit. This tree is
+     * enhanced with neighboring links that allow to go from a point X to it's
+     * neighbor X' = X+e_i in constant time.
+    
+     * In order to represent a digital set, a tree is built dynamically. The
+     * digital set is represented the following way : 
+     *  - If there is no node coding a point X, then X is not in the set.
+     *  - If there is a node coding a point X, then the boolean 'inTheSet'
+     *    indicates if the point is in the set.
+    
+     * In dimension d, a node may have up to '2^d' sons since the points have
+     * 'd' coordinages. There is also up to '2*d' neighbornigs links since a
+     * piont 'X' has '2*d' neighbors of the form 'X +/- e_i'.
+     */
+    class Node
+      {
+    public :
+
+      friend class Tree;
+
+
+      // ----------------------- Standard services ------------------------------
+      Node() {}
+      void initNode( Node * father, TypeOfSon type );
+
+
+      /**
+       * Acces and maybe create a neighbor.
+       *
+       * @param d the direction of the neighbor
+       */
+      Node * findNeighbor( Direction d );
+
+      /**
+       * Sets a neighbor.
+       *
+       * @param id the number identifying the neighbor
+       * @param n  the adress of the neighbor
+       */
+      void setNeighbor( int id, Node * n );
+
+      /**
+       * Gets a neighbor.
+       *
+       * @param id the number identifying the neighbor.
+       * @return the adress the neighbor.
+       */
+      Node * getNeighbor( int id ) const;
+
+
+      // ------------------------- Protected Datas ------------------------------
+      
+    protected :
+
+      Node * myFather;
+      Node * sons[ DigitalSetByNeighborTree::nb_sons ];
+      Node * neighbors[ DigitalSetByNeighborTree::nb_neighbors ];
+      bool inTheSet;
+      TypeOfSon myType;
+
+      // ----------------------- Interface --------------------------------------
+
+    public :
+      // Extra information, for validation only.
+      Point position;
+      void displayPos( std::ostream & out ) const;
+
+
+      /**
+       * Writes/Displays the object on an output stream.
+       * @param out the output stream where the object is written.
+       */
+      void selfDisplay( std::ostream & out, int indent = 0 ) const;
+
+      };
+
+    class Root : public Node
+      {
+    public :
+        Root( ) {}
+        void initRoot( unsigned int aTypeOfRoot );
+        unsigned int typeOfRoot;
+        void selfDisplay( std::ostream & out, int indent = 0 ) const;
+      };
+
 
     // ----------------------- Standard services ------------------------------
   public:
@@ -295,6 +500,11 @@ namespace DGtal
      */
     void computeBoundingBox( Point & lower, Point & upper ) const;
 
+    static const int D = Space::dimension;
+    static const int nb_sons = POWER< 2, D >::RET;
+    static const int nb_neighbors = 2*D;
+
+
 
     // ----------------------- Interface --------------------------------------
   public:
@@ -305,6 +515,8 @@ namespace DGtal
      */
     void selfDisplay ( std::ostream & out ) const;
 
+    void displayAllNodes( std::ostream & out ) const;
+
     /**
      * Checks the validity/consistency of the object.
      * @return 'true' if the object is valid, 'false' otherwise.
@@ -312,7 +524,7 @@ namespace DGtal
     bool isValid() const;
 
     // ------------------------- Protected Datas ------------------------------
-  protected:
+  public:
 
     /**
      * The associated domain;
@@ -322,7 +534,7 @@ namespace DGtal
     /**
      * The container storing the points of the set.
      */
-    Tree * myTree;
+    Tree myTree;
 
 
   public:
@@ -360,6 +572,11 @@ namespace DGtal
   private:
 
 
+    template <typename Domain>
+      friend std::ostream&
+      operator<< ( std::ostream & out, const DigitalSetByNeighborTree<Domain> & object );
+
+
   }; // end of class DigitalSetByNeighborTree
 
 
@@ -372,7 +589,11 @@ namespace DGtal
    */
   template <typename Domain>
   std::ostream&
-  operator<< ( std::ostream & out, const DigitalSetByNeighborTree<Domain> & object );
+  operator<< ( std::ostream & out, const DigitalSetByNeighborTree<Domain> & object )
+    {
+      object.selfDisplay( out );
+      return out;
+    }
 
 } // namespace DGtal
 

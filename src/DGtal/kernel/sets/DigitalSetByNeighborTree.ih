@@ -37,43 +37,152 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////
-// ----------------------- Subclass tree ------------------------------
+// ----------------------- Subclass Tree ------------------------------
 
 template <typename Domain>
 inline
 DGtal::DigitalSetByNeighborTree<Domain>::Tree::Tree()
 {
-  int max = NB_SONS;
-  for ( unsigned int i=0; i<max; ++i ) 
-    {
-      roots[ i ].father = &roots[ i ];
-      visited = false;
-      for ( int i=0; i<NB_SONS; ++i )
-        sons[i] = NULL;
-      for ( int i=0; i<NB_NEIGHBORS; ++i )
-        neighbors[i] = NULL;
-      sons[ i ] = &roots[ i ];
-    }
-
-  //Link the roots togheter
-  for ( int i=0; i<max; ++i ) {
-      Son s(i);
-      for ( unsigned int j=0; j<d; ++j ) {
-          int bit = s.bitValue(j);
+  // Link the roots togheter in other to implement the two's complementary
+  // notation.
+  for ( unsigned int i=0; i<nb_sons; ++i ) {
+      TypeOfSon s(i);
+      roots[i].initRoot( i );
+      for ( unsigned int j=0; j<D; ++j ) {
+          bool bit = s.getBit(j);
           s.flipBit(j);
           if (!bit) 
-            roots[i]->neighbors[(2*j)+1] = roots[s.intValue()];
+            roots[i].setNeighbor( (2*j)+1, &roots[ s.intValue() ] );
           else
-            roots[i]->neighbors[2*j] = roots[s.intValue()];
+            roots[i].setNeighbor( 2*j, &roots[ s.intValue() ] );
           s.flipBit(j);
       }
   }
-
-  //Start at origin
-  active = roots[0];
-  active->setVisited(true);
 }
 
+template <typename Domain>
+inline
+typename DGtal::DigitalSetByNeighborTree<Domain>::Node * 
+DGtal::DigitalSetByNeighborTree<Domain>::Tree::
+findNeighbor( Node * actual, Direction d )
+{
+  Node * neighbor = NULL;
+  int neighbor_id = d.intValue();
+  // If a neighboring link has already been build, use it !
+  if ( actual->neighbors[ neighbor_id ] != NULL )
+    {
+      neighbor = actual->neighbors[ neighbor_id ];
+    }
+  // Otherwise, it suffices the as the father. This may involve recursion.
+  else
+    {
+      TypeOfSon s = actual->myType;
+      int axis = d.axis();
+      bool bit = s.getBit( axis );
+      s.flipBit( axis ); // s is now the TypeOfSon of the neighbor we're looking for.
+
+      // if this neighbor has the same father
+      if ( ( d.positive() && !bit ) || ( d.negative() && bit ) )
+        //neighbor = actual->myFather->getSon( s );
+        neighbor = getSon( actual->myFather, s );
+      else
+        // otherwise, use recursion.
+        neighbor = getSon( actual->myFather->getNeighbor( d.intValue() ), s );
+    }
+  return neighbor;
+}
+
+
+template <typename Domain>
+inline
+typename DGtal::DigitalSetByNeighborTree<Domain>::Node * 
+DGtal::DigitalSetByNeighborTree<Domain>::Tree::
+getSon( Node * father, TypeOfSon type )
+{
+  int id = type.intValue();
+  if ( father->sons[ id ] == NULL )
+    {
+      Node n;
+      // TODO replace this 'new' by a NodeHandler that allocates many nodes at once.
+      father->sons[ id ] = new Node();
+      myNodes.push_back( father->sons[ id ] );
+    }
+  return father->sons[ id ];
+}
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+// ----------------------- Subclass Root ------------------------------
+template <typename Domain>
+inline
+void DGtal::DigitalSetByNeighborTree<Domain>::Root::
+initRoot( unsigned int aTypeOfRoot )
+{
+  this->myFather = this;
+  this->inTheSet = false;
+  for ( int i=0; i<nb_neighbors; ++i )
+    this->neighbors[i] = NULL;
+  for ( int i=0; i<nb_sons; ++i )
+    this->sons[i] = NULL;
+  this->typeOfRoot = aTypeOfRoot;
+  this->sons[ typeOfRoot ] = this;
+  for ( int i=0; i<D; ++i )
+    this->position[i] = ( aTypeOfRoot & (1 << i) ) ? -1 : 0 ;
+}
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+// ----------------------- Subclass Node ------------------------------
+
+
+template <typename Domain>
+inline
+void 
+DGtal::DigitalSetByNeighborTree<Domain>::Node::
+initNode( Node * father, TypeOfSon type )
+{
+  myFather = father;
+  myType = type;
+}
+
+
+template <typename Domain>
+inline
+void 
+DGtal::DigitalSetByNeighborTree<Domain>::Node::
+setNeighbor( int id, Node * n )
+{
+  neighbors[ id ] = n;
+}
+
+
+template <typename Domain>
+inline
+typename DGtal::DigitalSetByNeighborTree<Domain>::Node * 
+DGtal::DigitalSetByNeighborTree<Domain>::Node::getNeighbor ( int id ) const
+{
+  return neighbors[ id ];
+}
+
+
+// template <typename Domain>
+// inline
+// typename DGtal::DigitalSetByNeighborTree<Domain>::Node *
+// DGtal::DigitalSetByNeighborTree<Domain>::Node::
+// getSon( TypeOfSon type )
+// {
+//   int id = type.intValue();
+//   if ( sons[ id ] == NULL )
+//     {
+//       // TODO replace this 'new' by a NodeHandler that allocates many nodes at once.
+//       sons[ id ] = new Node();
+//       sons[ id ]->initNode( this, type );
+//     }
+//   return sons[ id ];
+// }
+// 
 
 ///////////////////////////////////////////////////////////////////////////////
 // ----------------------- Standard services ------------------------------
@@ -98,7 +207,7 @@ template <typename Domain>
 inline
 DGtal::DigitalSetByNeighborTree<Domain>::
 DigitalSetByNeighborTree( const Domain & d )
-  : myDomain( d ), myTree()
+  : myDomain( d )
 {
 }
 
@@ -111,8 +220,9 @@ inline
 DGtal::DigitalSetByNeighborTree<Domain>::
 DigitalSetByNeighborTree( const DigitalSetByNeighborTree<Domain> & other )
   : myDomain( other.myDomain ), myTree ( other.myTree  )
-{
-}
+{ }
+
+
 
 /**
  * Assignment.
@@ -130,3 +240,115 @@ DGtal::DigitalSetByNeighborTree<Domain>::operator= ( const DigitalSetByNeighborT
   myTree  = other.myTree ;
   return *this;
 }
+
+
+template <typename Domain>
+inline
+void DGtal::DigitalSetByNeighborTree<Domain>::displayAllNodes ( std::ostream & out ) const
+{
+  for ( int i=0; i<nb_sons; ++i )
+    {
+      out << "Tree rooted on : " << myTree.roots[i] << "\n";
+
+      
+    }
+}
+
+template <typename Domain>
+inline
+void DGtal::DigitalSetByNeighborTree<Domain>::selfDisplay ( std::ostream & out ) const
+{
+  out << "[DigitalSetByNeighborTree]::start\n";
+  myTree.selfDisplay( out, 2 );
+  out << "[DigitalSetByNeighborTree]::end\n";
+}
+
+std::string indentation( int n )
+{
+  std::string s("");
+  for ( int i=0; i<n; ++i )
+    s += " ";
+  return s;
+}
+
+template <typename Domain>
+inline
+void DGtal::DigitalSetByNeighborTree<Domain>::Tree::selfDisplay ( std::ostream & out, int indent ) const
+{
+  out << indentation(indent) << "[Tree]::start\n";
+  indent += 2;
+  for ( int i=0; i<nb_sons; ++i )
+    {
+      roots[i].selfDisplay( out, indent );
+    }
+  indent -= 2;
+  out << indentation(indent) << "[Tree]::end\n";
+}
+
+template <typename Domain>
+inline
+void DGtal::DigitalSetByNeighborTree<Domain>::Node::displayPos ( std::ostream & out ) const
+{
+  out << "(" << position[0];
+  for ( int i=1; i<D; ++i )
+    out << "," << position[i];
+  out << ")";
+}
+
+template <typename Domain>
+inline
+void DGtal::DigitalSetByNeighborTree<Domain>::Root::selfDisplay ( std::ostream & out, int indent ) const
+{
+  out << indentation(indent) << "[Root]::start\n";
+  indent += 2;
+  out << indentation(indent) << "|-> Type of root : ";
+  TypeOfSon t( typeOfRoot );
+  for ( int i=0; i<D; ++i )
+    out << t.getBit(i);
+  out << ", Coords : ";
+  this->displayPos( out );
+  out << "\n";
+  out << indentation(indent) << "|-> Neighbors : ";
+  for ( int i=0; i<nb_neighbors; ++i )
+    {
+      if ( this->neighbors[i] == NULL )
+        out << "null";
+      else
+        this->neighbors[i]->displayPos( out );
+      out << ", ";
+    }
+  out << "\n";
+  indent -= 2;
+  out << indentation(indent) << "[Root]::end\n";
+}
+
+
+
+template <typename Domain>
+inline
+void DGtal::DigitalSetByNeighborTree<Domain>::Node::selfDisplay ( std::ostream & out, int indent ) const
+{
+  out << indentation(indent) << "[Node]::start\n";
+  indent += 2;
+  out << indentation(indent) << "|-> Type of son : ";
+  TypeOfSon t( myType );
+  for ( int i=0; i<D; ++i )
+    out << t.getBit(i);
+  out << ", Coords : ";
+  this->displayPos( out );
+  out << "\n";
+  out << indentation(indent) << "|-> Neighbors : ";
+  for ( int i=0; i<nb_neighbors; ++i )
+    {
+      if ( this->neighbors[i] == NULL )
+        out << "null";
+      else
+        this->neighbors[i]->displayPos( out );
+      out << ", ";
+    }
+  out << "\n";
+  indent -= 2;
+  out << indentation(indent) << "[Node]::end\n";
+}
+
+

@@ -46,30 +46,57 @@
 #include "DGtal/kernel/domains/CDomainArchetype.h"
 #include "DGtal/kernel/sets/DigitalSetByNeighborTree.h"
 
-#include "DGtal/helpers/StdDefs.h"
+// #include "DGtal/helpers/StdDefs.h"
 
-#include "DGtal/io/boards/Board2D.h"
+// #include "DGtal/io/boards/Board2D.h"
 
 
 using namespace DGtal;
 using namespace std;
 
 
+
 int main()
 {
-  typedef SpaceND<4> Space4Type;
-  typedef HyperRectDomain<Space4Type> Domain;
-  typedef Space4Type::Point Point;
+  typedef SpaceND<3> Space3Type;
+  typedef HyperRectDomain<Space3Type> Domain;
+  typedef Space3Type::Point Point;
+  typedef DigitalSetByNeighborTree< Domain > DS;
+  typedef DS::Tree Tree;
+  typedef DS::Node Node;
+  typedef DS::Direction Direction;
 
   bool res;
   res = true;
-  DGtal::int32_t t[] =  { 1, 2, 3 , 4};
+  DGtal::int32_t t[] =  { 1, 2, 3};
   Point a ( t );
-  DGtal::int32_t t2[] = { 5, 5, 3 , 5};
+  DGtal::int32_t t2[] = { 5, 5, 5};
   Point b ( t2);
   trace.beginBlock ( "Wouhou !" );
   Domain dom;
-  DigitalSetByNeighborTree< Domain > ds( dom );
+  DS ds( dom );
+
+  Node *n, *m;
+
+  for ( int i=0; i<10; ++i )
+    {
+      for ( int j=1; j<=3; ++j )
+        {
+          cout << i << ".\n";
+          n  = &ds.myTree.roots[i];
+          m = ds.myTree.findNeighbor( n, Direction(j) ); 
+          cout << "  d = " << j << "\n";
+          m->selfDisplay( cout, 9 );
+
+          n  = &ds.myTree.roots[i];
+          m = ds.myTree.findNeighbor( n, Direction(-j) ); 
+          cout << "  d = " << -j << "\n";
+          m->selfDisplay( cout, 9 );
+          cout << endl;
+        }
+    }
+
+  cout << ds << endl;
 
   trace.endBlock();
   trace.emphase() << ( res ? "Passed." : "Error." ) << endl;
