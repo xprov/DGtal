@@ -38,9 +38,10 @@
 
 //////////////////////////////////////////////////////////////////////////////
 // Inclusions
-#include "DGtal/base/Common.h"
 #include <iostream>
 #include <vector>
+#include "DGtal/base/Common.h"
+#include "DGtal/base/ExpressionTemplates.h"
 //////////////////////////////////////////////////////////////////////////////
 
 
@@ -86,6 +87,9 @@ namespace DGtal
     typedef typename Domain::Point Point;
     typedef typename Domain::Vector Vector;
     typedef typename Domain::Size Size;
+    typedef typename Domain::Integer TInteger;
+    typedef typename NumberTraits< TInteger >::SignedVersion Integer;
+    typedef typename NumberTraits< TInteger >::UnsignedVersion UnsignedInteger;
 
     struct SConstIterator;
     typedef struct SConstIterator Iterator;
@@ -97,20 +101,6 @@ namespace DGtal
 
 
 
-    // Little template trick in order to compute integer's exponential at
-    // compile time.
-    template < int N, int K >
-      struct POWER
-        {
-          enum { RET = N * POWER<N,K-1>::RET };
-        };
-
-    template < int N >
-      struct POWER<N,0>
-        {
-          enum { RET = 1 };
-        };
-
     class Node;
     class Root;
     class Direction;
@@ -120,10 +110,17 @@ namespace DGtal
     {
 
       // ---------------------- New types definition ---------------------------
-
     public :
       Tree();
 
+      /**
+       * Returns the adress if the neighbor of 'n' in direction 'd'. If no such
+       * node exist in the tree then it is created.
+       *
+       * @param n the adress of the node.
+       * @param d the direction of the neighbor relatively to 'n'.
+       * @returns the adress of the neighbor.
+       */
       Node * findNeighbor( Node * n, Direction d );
 
       /**
@@ -135,14 +132,68 @@ namespace DGtal
        */
       Node * getSon( Node * father, TypeOfSon type );
 
-      // In order to represent a d dimensional space, a tree with 2^d roots is
-      // built. More precisely, we build one tree per hyper-octant but we link
-      // all the roots together in order to have a single tree.
-      Root roots[ DigitalSetByNeighborTree::nb_sons ];
+      /**
+       * Located the node representing a point p. If no such node exists in the
+       * tree, then NULL is returned.
+       *
+       * @param p a point of the domain.
+       * @returns the adress of the node at position p or NULL if there are
+       * no such node in the tree.
+       */
+      Node * findNode( const Point & p );
+
       void selfDisplay( std::ostream & out, int indent = 0 ) const;
+
+    public : // TODO : this should be protected.
+
+      /**
+       * In order to represent a d dimensional space, a tree with 2^d roots is
+       * built. More precisely, we build one tree per hyper-octant but we link
+       * all the roots together in order to have a single tree.
+       */
+      Root roots[ DigitalSetByNeighborTree::nb_sons ];
+
+    protected :
 
       // Nodes are allocated by the tree and stored in recondary structure.
       std::vector<Node * > myNodes;
+
+      // ------------------- static arithmetic services -----------------
+      
+    public :
+
+      /**
+       * Return the depth of a node whose deepest coordinate is 'n'.
+       * 
+       * Note that the roots of the tree encode all nodes with coordinates in
+       * {0,-1} so that depth is 0 for both 0 and -1. For other negative
+       * numbers, the depth is log_2(-n+1) while the depth of a positive
+       * number is simply log_2(n).
+       *
+       * @param n a signed Integer 
+       * @returns the minimal depth to encode n.
+       */
+      static UnsignedInteger depth( Integer n );
+
+
+      /**
+       * Returns the depth the node that encodes a point p.
+       *
+       * @param p a point.
+       * @returns the depth of p.
+       */
+      static UnsignedInteger depth( Point p );
+
+      // ------------------------ Private servies -------------------
+    protected :
+
+      /**
+       * Return the adress of the root of the subtree containing p.
+       *
+       * @param p a point.
+       * @returns the adress of the root.
+       */
+      Root * getRoot( const Point & p );
 
     };
 
@@ -188,13 +239,15 @@ namespace DGtal
         // Returns the value of the n-th bit
         bool getBit( int n ) const
           {
-            return ( type & ( 1 << ( D - n - 1 ) ) );
+            //return ( type & ( 1 << ( D - n - 1 ) ) );
+            return ( type & ( 1 << n ) );
           }
 
         // Flips the value of the n-th bit
         void flipBit( int n )
           {
-            type ^= ( 1 << ( D - n - 1 ) );
+            //type ^= ( 1 << ( D - n - 1 ) );
+            type ^= ( 1 << n );
           }
 
           
@@ -262,7 +315,6 @@ namespace DGtal
 
       friend class Tree;
 
-
       // ----------------------- Standard services ------------------------------
       Node() {}
       void initNode( Node * father, TypeOfSon type );
@@ -305,8 +357,9 @@ namespace DGtal
       // ----------------------- Interface --------------------------------------
 
     public :
-      // Extra information, for validation only.
-      Point position;
+
+      Point getPosition() const;
+
       void displayPos( std::ostream & out ) const;
 
 
@@ -325,6 +378,7 @@ namespace DGtal
         void initRoot( unsigned int aTypeOfRoot );
         unsigned int typeOfRoot;
         void selfDisplay( std::ostream & out, int indent = 0 ) const;
+        Point getPosition() const;
       };
 
 
@@ -501,9 +555,11 @@ namespace DGtal
     void computeBoundingBox( Point & lower, Point & upper ) const;
 
     static const int D = Space::dimension;
-    static const int nb_sons = POWER< 2, D >::RET;
+    static const int nb_sons = DGtal::POW< 2, D >::VALUE;
     static const int nb_neighbors = 2*D;
 
+    // ----------------------- Static arithmetic services -----------------------------
+  public:
 
 
     // ----------------------- Interface --------------------------------------

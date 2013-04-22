@@ -56,11 +56,11 @@ using namespace std;
 
 
 
-int main()
+int main( int argc, const char ** argv )
 {
-  typedef SpaceND<3> Space3Type;
-  typedef HyperRectDomain<Space3Type> Domain;
-  typedef Space3Type::Point Point;
+  typedef SpaceND<3> SpaceType;
+  typedef HyperRectDomain<SpaceType> Domain;
+  typedef SpaceType::Point Point;
   typedef DigitalSetByNeighborTree< Domain > DS;
   typedef DS::Tree Tree;
   typedef DS::Node Node;
@@ -68,7 +68,7 @@ int main()
 
   bool res;
   res = true;
-  DGtal::int32_t t[] =  { 1, 2, 3};
+  DGtal::int32_t t[] =  { 0, 0, 0};
   Point a ( t );
   DGtal::int32_t t2[] = { 5, 5, 5};
   Point b ( t2);
@@ -77,26 +77,78 @@ int main()
   DS ds( dom );
 
   Node *n, *m;
+  // for ( int i=0; i<4; ++i )
+  //   {
+  //     n  = &ds.myTree.roots[i];
+  //     cout << "i=" << i << ".\n";
+  //     n->selfDisplay( cout );
+  //     for ( int j=1; j<=2; ++j )
+  //       {
+  //         cout << "  d = " << j << "\n";
+  //         m = ds.myTree.findNeighbor( n, Direction(j) ); 
+  //         m->selfDisplay( cout, 2 );
 
-  for ( int i=0; i<10; ++i )
+  //         m = ds.myTree.findNeighbor( n, Direction(-j) ); 
+  //         cout << "  d = " << -j << "\n";
+  //         m->selfDisplay( cout, 2);
+  //         cout << endl;
+  //       }
+  //   }
+
+  // cout << ds << endl;
+
+  n = & ds.myTree.roots[ 0 ];
+  if ( argc < 4 )
+    exit(1);
+  Point p( atoi( argv[1]), atoi( argv[2] ), atoi( argv[3] ));
+  for ( int i=p[0]; i<0; ++i )
     {
-      for ( int j=1; j<=3; ++j )
-        {
-          cout << i << ".\n";
-          n  = &ds.myTree.roots[i];
-          m = ds.myTree.findNeighbor( n, Direction(j) ); 
-          cout << "  d = " << j << "\n";
-          m->selfDisplay( cout, 9 );
-
-          n  = &ds.myTree.roots[i];
-          m = ds.myTree.findNeighbor( n, Direction(-j) ); 
-          cout << "  d = " << -j << "\n";
-          m->selfDisplay( cout, 9 );
-          cout << endl;
-        }
+      n = ds.myTree.findNeighbor( n, Direction( -1 ) );
+    }
+  for ( int i=0; i<p[0]; ++i )
+    {
+      n = ds.myTree.findNeighbor( n, Direction( 1 ) );
     }
 
-  cout << ds << endl;
+  for ( int i=p[1]; i<0; ++i )
+    {
+      n = ds.myTree.findNeighbor( n, Direction( -2 ) );
+    }
+  for ( int i=0; i < p[1]; ++i )
+    {
+      n = ds.myTree.findNeighbor( n, Direction( 2 ) );
+    }
+
+  for ( int i=p[2]; i<0; ++i )
+    {
+      n = ds.myTree.findNeighbor( n, Direction( -3 ) );
+    }
+  for ( int i=0; i < p[2]; ++i )
+    {
+      n = ds.myTree.findNeighbor( n, Direction( 3 ) );
+    }
+
+  n->selfDisplay( cout );
+  Node * other = ds.myTree.findNode( p );
+  cout << n << " " << other << endl;
+  res = ( n == other );
+
+
+  //for ( int i=-33; i<=33; ++i )
+  //  {
+  //    cout << i << " -> " ;
+  //    //for ( int k=DS::Tree::depth( i )-1; k >=0; --k )
+  //    for ( int k=5; k >=0; --k )
+  //      {
+  //        unsigned int mask = ( 1 << k );
+  //        if ( i & mask )
+  //          cout << "1" ;
+  //        else
+  //          cout << "0" ;
+  //      }
+  //    cout << endl;
+  //  }
+
 
   trace.endBlock();
   trace.emphase() << ( res ? "Passed." : "Error." ) << endl;
