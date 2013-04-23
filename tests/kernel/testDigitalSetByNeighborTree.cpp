@@ -99,8 +99,16 @@ int main( int argc, const char ** argv )
 
   n = & ds.myTree.roots[ 0 ];
   if ( argc < 4 )
-    exit(1);
+    {
+      cerr << "Erreur, manque les coords d'un points" << endl;
+      exit(1);
+    }
   Point p( atoi( argv[1]), atoi( argv[2] ), atoi( argv[3] ));
+
+  Node * other_1 = ds.myTree.findNode( p, false );
+  Node * other_2 = ds.myTree.findNode( p, true );
+  Node * other_3 = ds.myTree.findNode( p, false );
+
   for ( int i=p[0]; i<0; ++i )
     {
       n = ds.myTree.findNeighbor( n, Direction( -1 ) );
@@ -129,9 +137,8 @@ int main( int argc, const char ** argv )
     }
 
   n->selfDisplay( cout );
-  Node * other = ds.myTree.findNode( p );
-  cout << n << " " << other << endl;
-  res = ( n == other );
+  cout << n << " " << other_1 << " " << other_2 << " " << other_3 << endl;
+  res = ( other_1 == NULL ) && ( n == other_2 ) && ( n == other_3);
 
 
   //for ( int i=-33; i<=33; ++i )
@@ -148,7 +155,29 @@ int main( int argc, const char ** argv )
   //      }
   //    cout << endl;
   //  }
+  
+  ds.myTree.addPoint( p );
 
+    {
+      cout << "In the tree : \n";
+      DS::Tree::Iterator it = ds.myTree.begin();
+      DS::Tree::Iterator itEnd = ds.myTree.end();
+      for ( ; it != itEnd ; ++it )
+        {
+          cout << (*it)->getPosition() << ", ";
+        }
+      cout << endl;
+    }
+    {
+      cout << "In the set : \n";
+      DS::ConstIterator it = ds.begin();
+      DS::ConstIterator itEnd = ds.end();
+      for ( ; it != itEnd; ++it )
+        {
+          cout << *it << ", ";
+        }
+      cout << endl;
+    }
 
   trace.endBlock();
   trace.emphase() << ( res ? "Passed." : "Error." ) << endl;

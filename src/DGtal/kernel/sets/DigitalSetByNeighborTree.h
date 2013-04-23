@@ -91,25 +91,247 @@ namespace DGtal
     typedef typename NumberTraits< TInteger >::SignedVersion Integer;
     typedef typename NumberTraits< TInteger >::UnsignedVersion UnsignedInteger;
 
-    struct SConstIterator;
-    typedef struct SConstIterator Iterator;
-    typedef struct SIterator ConstIterator;
 
-    // ---------------------- New types definition ---------------------------
+    // ---------------------- New classes definition ---------------------------
 
   public:
 
 
 
+    class Tree;
     class Node;
     class Root;
     class Direction;
     class TypeOfSon;
+    class Iterator;
+    class ConstIterator;
+
+    class Iterator
+      {
+    public :
+      typedef Iterator Self;
+      typedef Point Value;
+      typedef Value* Pointer;
+      typedef Value& Reference;
+
+      // --------------------------- std types ------------------------
+      typedef Value value_type;
+      typedef Pointer pointer;
+      typedef Reference reference;
+      typedef std::bidirectional_iterator_tag iterator_category;
+
+    public :
+
+      // Copy constructor
+      // @param other the object to clone.
+      Iterator ( const Iterator & other ) : it( other.it ), myTree( other.myTree ) {}
+
+      // Default constructor
+      Iterator () {}
+
+      // Constructor from Tree::Iterator 
+      // @param other an iterator on a Tree.
+      Iterator ( const typename Tree::Iterator & other, Tree * t ) : it( other ), myTree(t) {}
+
+      // The point is constructed on request because the node do not remember
+      // their coordinates. Thus this call has time complexity in 
+      // O( log( max( coordinates ) ) )
+      Point operator* () const
+        {
+          return (*it)->getPosition();
+        }
+
+      Self & operator= ( const Self & other )
+        {
+          it = other.it;
+          myTree = other.myTree;
+          return *this;
+        }
+
+      bool operator== (Iterator & other)
+        {
+          return ( ( myTree == other.myTree) && ( this->it == other.it ) );
+        }
+
+      bool operator!= (Iterator & other)
+        {
+          return ( ( myTree != other.myTree) || ( this->it != other.it ) );
+        }
+
+      Iterator & operator++ () //préfix
+        {
+          // iterates on the nodes of the tree but consider only those that are
+          // inside the set.
+          ++it;
+          typename Tree::Iterator itEnd = myTree->end();
+          while ( ( it != itEnd ) && ( ! (*it)->inside() ) )
+            {
+              ++it;
+            }
+          return *this;
+        }
+
+      Iterator operator++ ( int ) //postfix
+        {
+          Iterator i( *this );
+          // iterates on the nodes of the tree but consider only those that are
+          // inside the set.
+          ++it;
+          typename Tree::Iterator itEnd = myTree->end();
+          while ( ( it != itEnd ) && ( ! (*it)->inside() ) )
+            {
+              ++it;
+            }
+          return i;
+        }
+
+      Iterator & operator-- () //préfix
+        {
+          // iterates on the nodes of the tree but consider only those that are
+          // inside the set.
+          --it;
+          typename Tree::Iterator itBegin = myTree->begin();
+          while ( ( it != itBegin ) && ( ! (*it)->inside() ) )
+            {
+              --it;
+            }
+          return *this;
+        }
+
+      Iterator operator-- ( int ) //postfix
+        {
+          Iterator i( this );
+          --it;
+          typename Tree::Iterator itBegin = myTree->begin();
+          while ( ( it != itBegin ) && ( ! (*it)->inside() ) )
+            {
+              --it;
+            }
+          return i;
+        }
+
+      friend class ConstIterator;
+
+    protected :
+      Tree * myTree;
+      typename Tree::Iterator it;
+      };
+
+    class ConstIterator
+      {
+    public :
+
+      // default constructor, does nothing.
+      ConstIterator() {}
+
+      // Constructor from Tree::ConstIterator
+      ConstIterator ( const typename Tree::ConstIterator & other, Tree * t ) 
+        : it( other ), myTree(t) {}
+
+      // Constructor from Tree::Iterator
+      ConstIterator ( const typename Tree::Iterator & other, Tree * t ) 
+        : it( other ), myTree( t ) {}
+
+      // copy constructor
+      ConstIterator ( const ConstIterator & other ) : 
+        it( other.it ), myTree( other.myTree )  {}
+
+      // copy constructor from Iterator
+      ConstIterator ( const Iterator & other ) 
+        : it( other.it ), myTree( other.myTree ) {}
+
+      // O( log( max( coordinates ) ) )
+      Point operator* ()
+        {
+          return (*it)->getPosition();
+        }
+
+      ConstIterator & operator= ( ConstIterator & other )
+        {
+          it = other.it;
+          myTree = other.myTree;
+          return *this;
+        }
+
+      ConstIterator & operator= ( Iterator & other )
+        {
+          it = other.it;
+          myTree = other.myTree;
+          return *this;
+        }
+
+      bool operator== (ConstIterator & other)
+        {
+          return ( ( myTree == other.myTree ) && ( this->it == other.it ) );
+        }
+
+      bool operator!= (ConstIterator & other)
+        {
+          return ( ( myTree != other.myTree ) || ( this->it != other.it ) );
+        }
+
+      ConstIterator & operator++ () //préfix
+        {
+          ++it;
+          typename Tree::Iterator itEnd = myTree->end();
+          while ( ( it != itEnd ) && ( ! (*it)->inside() ) )
+            {
+              ++it;
+            }
+          return *this;
+        }
+
+      ConstIterator operator++ ( int ) //postfix
+        {
+          ConstIterator i( this );
+          ++it;
+          typename Tree::Iterator itEnd = myTree->end();
+          while ( ( it != itEnd ) && ( ! (*it)->inside() ) )
+            {
+              ++it;
+            }
+          return i;
+        }
+
+      ConstIterator & operator-- () //préfix
+        {
+          --it;
+          typename Tree::Iterator itBegin = myTree->begin();
+          while ( ( it != itBegin ) && ( ! (*it)->inside() ) )
+            {
+              --it;
+            }
+          return *this;
+        }
+
+      ConstIterator operator-- ( int ) //postfix
+        {
+          ConstIterator i( this );
+          --it;
+          typename Tree::Iterator itBegin = myTree->begin();
+          while ( ( it != itBegin ) && ( ! (*it)->inside() ) )
+            {
+              --it;
+            }
+          return i;
+        }
+
+    protected :
+      typename Tree::ConstIterator it;
+      Tree * myTree;
+      };
 
     class Tree 
     {
 
       // ---------------------- New types definition ---------------------------
+
+  public :
+      typedef std::vector<Node*> Container;
+      typedef typename Container::const_iterator ConstIterator;
+      typedef typename Container::iterator Iterator;
+
+      // ---------------------- Standard services ------------------------------
     public :
       Tree();
 
@@ -134,13 +356,35 @@ namespace DGtal
 
       /**
        * Located the node representing a point p. If no such node exists in the
-       * tree, then NULL is returned.
+       * tree then, depending on the boolean 'add' either new nodes are created
+       * in order to add the specified point to the structure, or NULL is
+       * returned.
        *
        * @param p a point of the domain.
-       * @returns the adress of the node at position p or NULL if there are
-       * no such node in the tree.
+       * @param add indicate if new nodes should be created.
+       * @returns the adress of the node at position p or NULL if add is false
+       * and there are no such node in the tree.
        */
-      Node * findNode( const Point & p );
+      Node * findNode( const Point & p, bool add );
+
+      /**
+       * Add a point p to the tree.
+       *
+       * @param p a point of the domain.
+       */
+      void addPoint( const Point & p );
+
+      /**
+       * Remove a point p to the tree.
+       *
+       * Note : Does not remove the node, no memory is freed when removing a
+       * point this way.
+       *
+       * @param p a point of the domain.
+       * @returns true if a point was removed.
+       */
+      bool removePoint( const Point & p );
+
 
       void selfDisplay( std::ostream & out, int indent = 0 ) const;
 
@@ -153,10 +397,10 @@ namespace DGtal
        */
       Root roots[ DigitalSetByNeighborTree::nb_sons ];
 
-    protected :
+    public : // TODO : this should be protected
 
       // Nodes are allocated by the tree and stored in recondary structure.
-      std::vector<Node * > myNodes;
+      Container myNodes;
 
       // ------------------- static arithmetic services -----------------
       
@@ -195,8 +439,39 @@ namespace DGtal
        */
       Root * getRoot( const Point & p );
 
-    };
+      // ------------------------ Iterator services -------------------
+      
+    public :
 
+      /**
+       * Tree begin() iterator.
+       *
+       * @return an Iterator on the first node of a tree.
+       **/
+      Iterator begin();
+
+      /**
+       * Tree end() iterator.
+       *
+       * @return an Iterator after the last node of a tree.
+       **/
+      Iterator end();
+
+      /**
+       * iTree begin() const iterator.
+       *
+       * @return an ConstIterator on the first node of a tree.
+       **/
+      ConstIterator begin() const;
+
+      /**
+       * Tree end() const iterator.
+       *
+       * @return a ConstIterator after the last element of a tree.
+       **/
+      ConstIterator end() const;
+
+    };
 
     /**
      * A node may have up do 2^d sons. In order to identify the sons a node,
@@ -342,6 +617,13 @@ namespace DGtal
        * @return the adress the neighbor.
        */
       Node * getNeighbor( int id ) const;
+
+      /**
+       * Determines if the node represent a point that is in the set.
+       *
+       * @return true if in the set, false otherwise.
+       */
+      bool inside( ) const;
 
 
       // ------------------------- Protected Datas ------------------------------
@@ -582,15 +864,14 @@ namespace DGtal
     // ------------------------- Protected Datas ------------------------------
   public:
 
-    /**
-     * The associated domain;
-     */
+    // The associated domain;
     const Domain & myDomain;
 
-    /**
-     * The container storing the points of the set.
-     */
+    // The container storing the points of the set.
     Tree myTree;
+
+    // The number of elements in the set.
+    Size mySize;
 
 
   public:
