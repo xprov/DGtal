@@ -36,6 +36,7 @@
 #include <fstream>
 #include <algorithm>
 #include <string>
+#include <vector>
 
 #include "DGtal/base/Common.h"
 #include "DGtal/kernel/SpaceND.h"
@@ -46,142 +47,251 @@
 #include "DGtal/kernel/domains/CDomainArchetype.h"
 #include "DGtal/kernel/sets/DigitalSetByNeighborTree.h"
 
-// #include "DGtal/helpers/StdDefs.h"
-
-// #include "DGtal/io/boards/Board2D.h"
-
+#define MAX 2147483647
 
 using namespace DGtal;
 using namespace std;
 
+typedef SpaceND<3> SpaceType;
+typedef HyperRectDomain<SpaceType> Domain;
+typedef SpaceType::Point Point;
+typedef DigitalSetByNeighborTree< Domain > DS;
+typedef DS::Tree Tree;
+typedef DS::Node Node;
+typedef DS::Direction Direction;
 
+set< Point > all_points;
+
+void genRandomPoints( vector<Point> & vec, int n, int max_coord )
+{
+  Point p;
+  vec.clear();
+  for ( int i=0; i<n; ++i )
+    {
+      for ( int d=0; d<DS::D; ++d )
+        {
+          p[d] = ( ( rand() % 2 ) ? 1 : -1 ) * ( rand() % max_coord );
+        }
+      vec.push_back( p );
+    }
+}
+
+bool test_one_point( DS & ds, const Point & p )
+{
+  Node *n, *m;
+
+  ds.insert( p );
+  all_points.insert( p );
+
+  // find/create node for p
+  m = ds.myTree->findNode( p, false );
+
+  // go to 'm' stating from the origin and using only 'findNeighbor'
+  Point origin( 0, 0, 0 );
+  n = ds.myTree->findNode( origin, false );
+  for ( int d=0; d<DS::D; ++d )
+    {
+      for ( int i=p[d]; i<0; ++i )
+        {
+          n = ds.myTree->findNeighbor( n, Direction( -(d+1) ) );
+        }
+      for ( int i=0; i<p[d]; ++i )
+        {
+          n = ds.myTree->findNeighbor( n, Direction( d+1 ) );
+        }
+    }
+  return ( m != NULL) && ( m == n );
+} 
+
+int test_small_points( DS & ds, int n, int max_coord )
+{
+  int nb_ok = 0;
+  vector<Point> v;
+  genRandomPoints( v, n, max_coord );
+  vector<Point>::const_iterator itEnd = v.end();
+  for ( vector<Point>::const_iterator it = v.begin();
+       it != itEnd; ++it )
+    {
+      nb_ok += ( test_one_point( ds, *it ) ) ? 1 : 0;
+    }
+  cout << "Set size : " << ds.size() << ", tree size : " << ds.myTree->size() << endl;
+  return nb_ok;
+}
+
+int test_big_points( DS & ds, int n ) 
+{
+  int nb_ok = 0;
+  vector< Point > v;
+  genRandomPoints( v, n, MAX );
+  vector<Point>::const_iterator itEnd = v.end();
+  for ( vector<Point>::const_iterator it = v.begin();
+       it != itEnd; ++it )
+    {
+      Point p = *it;
+      ds.insert( p );
+      all_points.insert( p );
+    }
+  for ( vector<Point>::const_iterator it = v.begin();
+       it != itEnd; ++it )
+    {
+      //DS::ConstIterator it_ds = ds.find( *it );
+      //nb_ok += ( ( it_ds != ds.end() ) && ( *it == *it_ds ) ) ? 1 : 0;
+      Node * n = ds.myTree->findNode( *it, false );
+      nb_ok += ( ( n != NULL ) && ( n->getPosition() == *it ) && ( n->inside() ) );
+    }
+  cout << "Set size : " << ds.size() << ", tree size : " << ds.myTree->size() << endl;
+  return nb_ok;
+}
+
+bool test_set_content( const DS & ds )
+{
+  bool ok = true;
+
+  ok = ( ds.size() == all_points.size() );
+
+  if ( ok )
+    {
+      set< Point >::const_iterator itEnd = all_points.end();
+      for( set< Point >::const_iterator it = all_points.begin() ;
+          it != itEnd; ++it )
+        {
+          DS::ConstIterator it_ds = ds.find( *it );
+          if ( ( it_ds == ds.end() ) || ( *it != *it_ds ) )
+            {
+              ok = false;
+              break;
+            }
+        }
+    } 
+  cout << "All points in the set : " << ( ( ok ) ? "yes" : "no" ) << endl;
+
+  if ( ok )
+    {
+      DS::ConstIterator itEnd = ds.end();
+      for( DS::ConstIterator it = ds.begin() ;
+          it != itEnd; ++it )
+        {
+          set< Point >::const_iterator it_set = all_points.find( *it );
+          if ( ( it_set == all_points.end() ) || ( *it != *it_set ) )
+            {
+              ok = false;
+              break;
+            }
+        }
+    }
+  cout << "Only points in the set : " << ( ( ok ) ? "yes" : "no" ) << endl;
+  return ok;
+}
+
+bool test_node_retrival( const DS & ds )
+{
+  int nb_ok = 0;
+  int nb_points = all_points.size();
+  set< Point >::const_iterator itEnd = all_points.end();
+  for( set< Point >::const_iterator it = all_points.begin() ;
+      it != itEnd; ++it )
+    {
+      Node * n = ds.myTree->findNode( *it, false );
+      if ( ( n != NULL ) && ( *it == n->getPosition() ) && ( n->inside() ) )
+        {
+          ++nb_ok;
+        }
+    } 
+  cout << "Points retreived : " << nb_ok << " / " << nb_points << endl;
+  return ( nb_ok == nb_points );
+}
+
+void usage( const char * name )
+{
+  cerr << "Usage : " << name << "  [nb_tests [max_coord]]" << endl;
+}
 
 int main( int argc, const char ** argv )
 {
-  typedef SpaceND<3> SpaceType;
-  typedef HyperRectDomain<SpaceType> Domain;
-  typedef SpaceType::Point Point;
-  typedef DigitalSetByNeighborTree< Domain > DS;
-  typedef DS::Tree Tree;
-  typedef DS::Node Node;
-  typedef DS::Direction Direction;
 
-  bool res;
-  res = true;
-  DGtal::int32_t t[] =  { 0, 0, 0};
+  bool res = true;
+  bool all_ok = true;
+
+
+  DGtal::int32_t t[] =  { -MAX, -MAX, -MAX };
   Point a ( t );
-  DGtal::int32_t t2[] = { 5, 5, 5};
-  Point b ( t2);
-  trace.beginBlock ( "Wouhou !" );
+  DGtal::int32_t t2[] = { MAX, MAX, MAX };
+  Point b ( t2 );
+
   Domain dom;
   DS ds( dom );
-
-  Node *n, *m;
-  // for ( int i=0; i<4; ++i )
-  //   {
-  //     n  = &ds.myTree.roots[i];
-  //     cout << "i=" << i << ".\n";
-  //     n->selfDisplay( cout );
-  //     for ( int j=1; j<=2; ++j )
-  //       {
-  //         cout << "  d = " << j << "\n";
-  //         m = ds.myTree.findNeighbor( n, Direction(j) ); 
-  //         m->selfDisplay( cout, 2 );
-
-  //         m = ds.myTree.findNeighbor( n, Direction(-j) ); 
-  //         cout << "  d = " << -j << "\n";
-  //         m->selfDisplay( cout, 2);
-  //         cout << endl;
-  //       }
-  //   }
-
-  // cout << ds << endl;
-
-  n = & ds.myTree.roots[ 0 ];
-  if ( argc < 4 )
-    {
-      cerr << "Erreur, manque les coords d'un points" << endl;
-      exit(1);
-    }
-  Point p( atoi( argv[1]), atoi( argv[2] ), atoi( argv[3] ));
-
-  Node * other_1 = ds.myTree.findNode( p, false );
-  Node * other_2 = ds.myTree.findNode( p, true );
-  Node * other_3 = ds.myTree.findNode( p, false );
-
-  for ( int i=p[0]; i<0; ++i )
-    {
-      n = ds.myTree.findNeighbor( n, Direction( -1 ) );
-    }
-  for ( int i=0; i<p[0]; ++i )
-    {
-      n = ds.myTree.findNeighbor( n, Direction( 1 ) );
-    }
-
-  for ( int i=p[1]; i<0; ++i )
-    {
-      n = ds.myTree.findNeighbor( n, Direction( -2 ) );
-    }
-  for ( int i=0; i < p[1]; ++i )
-    {
-      n = ds.myTree.findNeighbor( n, Direction( 2 ) );
-    }
-
-  for ( int i=p[2]; i<0; ++i )
-    {
-      n = ds.myTree.findNeighbor( n, Direction( -3 ) );
-    }
-  for ( int i=0; i < p[2]; ++i )
-    {
-      n = ds.myTree.findNeighbor( n, Direction( 3 ) );
-    }
-
-  n->selfDisplay( cout );
-  cout << n << " " << other_1 << " " << other_2 << " " << other_3 << endl;
-  res = ( other_1 == NULL ) && ( n == other_2 ) && ( n == other_3);
-
-
-  //for ( int i=-33; i<=33; ++i )
-  //  {
-  //    cout << i << " -> " ;
-  //    //for ( int k=DS::Tree::depth( i )-1; k >=0; --k )
-  //    for ( int k=5; k >=0; --k )
-  //      {
-  //        unsigned int mask = ( 1 << k );
-  //        if ( i & mask )
-  //          cout << "1" ;
-  //        else
-  //          cout << "0" ;
-  //      }
-  //    cout << endl;
-  //  }
   
-  ds.myTree.addPoint( p );
-
+  if ( ( argc > 1 ) && ( strcmp( argv[1], "-h" ) == 0 ) )
     {
-      cout << "In the tree : \n";
-      DS::Tree::Iterator it = ds.myTree.begin();
-      DS::Tree::Iterator itEnd = ds.myTree.end();
-      for ( ; it != itEnd ; ++it )
-        {
-          cout << (*it)->getPosition() << ", ";
-        }
-      cout << endl;
-    }
-    {
-      cout << "In the set : \n";
-      DS::ConstIterator it = ds.begin();
-      DS::ConstIterator itEnd = ds.end();
-      for ( ; it != itEnd; ++it )
-        {
-          cout << *it << ", ";
-        }
-      cout << endl;
+      usage( argv[0] );
+      exit( EXIT_SUCCESS );
     }
 
+  int nb_tests = ( argc >= 2 ) ? atoi( argv[1] ) : 100;
+  int max_coord = ( argc >=3 ) ?  atoi( argv[2] ) : 10000;
+  int nb_ok;
+
+  trace.beginBlock ( "Test small coordinates" );
+  nb_ok = test_small_points( ds, nb_tests, max_coord );
+  res = ( nb_ok == nb_tests );
   trace.endBlock();
-  trace.emphase() << ( res ? "Passed." : "Error." ) << endl;
-  return res ? 0 : 1;
+  if ( res )
+    {
+      trace.emphase() << "Passed." << endl;
+    }
+  else
+    {
+      trace.emphase() << "Failed. ( " << nb_ok << " / " << nb_tests << " )"<< endl;
+      all_ok = false;
+    }
+
+
+  trace.beginBlock ( "Test big coordinates" );
+  nb_ok = test_big_points( ds, nb_tests );
+  res = ( nb_ok == nb_tests );
+  trace.endBlock();
+  if ( res )
+    {
+      trace.emphase() << "Passed." << endl;
+    }
+  else
+    {
+      trace.emphase() << "Failed. ( " << nb_ok << " / " << nb_tests << " )"<< endl;
+      all_ok = false;
+    }
+
+  trace.beginBlock ( "Test set content" );
+  res = test_set_content( ds );
+  trace.endBlock();
+  if ( res )
+    {
+      trace.emphase() << "Passed." << endl;
+    }
+  else
+    {
+      trace.emphase() << "Failed." << endl;
+      all_ok = false;
+    }
+
+
+  trace.beginBlock ( "Test node retrival" );
+  res = test_node_retrival( ds );
+  trace.endBlock();
+  if ( res )
+    {
+      trace.emphase() << "Passed." << endl;
+    }
+  else
+    {
+      trace.emphase() << "Failed." << endl;
+      all_ok = false;
+    }
+
+
+
+
+  return all_ok ? 0 : 1;
+
 }
 
 /** @ingroup Tests **/

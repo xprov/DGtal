@@ -148,12 +148,12 @@ namespace DGtal
           return *this;
         }
 
-      bool operator== (Iterator & other)
+      bool operator== ( const Iterator & other ) const
         {
           return ( ( myTree == other.myTree) && ( this->it == other.it ) );
         }
 
-      bool operator!= (Iterator & other)
+      bool operator!= ( const Iterator & other ) const
         {
           return ( ( myTree != other.myTree) || ( this->it != other.it ) );
         }
@@ -241,7 +241,7 @@ namespace DGtal
         : it( other.it ), myTree( other.myTree ) {}
 
       // O( log( max( coordinates ) ) )
-      Point operator* ()
+      Point operator* () const
         {
           return (*it)->getPosition();
         }
@@ -260,12 +260,12 @@ namespace DGtal
           return *this;
         }
 
-      bool operator== (ConstIterator & other)
+      bool operator== ( const ConstIterator & other ) const
         {
           return ( ( myTree == other.myTree ) && ( this->it == other.it ) );
         }
 
-      bool operator!= (ConstIterator & other)
+      bool operator!= ( const ConstIterator & other ) const
         {
           return ( ( myTree != other.myTree ) || ( this->it != other.it ) );
         }
@@ -334,6 +334,7 @@ namespace DGtal
       // ---------------------- Standard services ------------------------------
     public :
       Tree();
+      ~Tree();
 
       /**
        * Returns the adress if the neighbor of 'n' in direction 'd'. If no such
@@ -385,22 +386,58 @@ namespace DGtal
        */
       bool removePoint( const Point & p );
 
+      /**
+       * Given the adress of a node in the Tree, returns a ConstIterator on that
+       * Node.
+       *
+       * @param n a pointer to a Node.
+       * @returns a ConstIterator on n, this->end() if n is NULL.
+       */
+      ConstIterator find( const Node * n ) const;
+
+      /**
+       * Given the adress of a node in the Tree, returns a Iterator on that
+       * Node.
+       *
+       * @param n a pointer to a Node.
+       * @returns an Iterator on n or this->end() if n is NULL.
+       */
+      Iterator find( Node * n );
+
+      /**
+       * Given a Point, returns a ConstIterator on the corresponding Node.
+       *
+       * @param p a point.
+       * @returns a ConstIterator on n or this->end() if p is not in the Tree.
+       */
+      ConstIterator find( const Point & p ) const;
+
+      /**
+       * Given a Point, returns a Iterator on the corresponding Node.
+       *
+       * @param p a point.
+       * @returns a ConstIterator on n or this->end() if p is not in the Tree.
+       */
+      Iterator find( const Point & p );
 
       void selfDisplay( std::ostream & out, int indent = 0 ) const;
 
-    public : // TODO : this should be protected.
+      Size size() const;
+
+    protected :
 
       /**
        * In order to represent a d dimensional space, a tree with 2^d roots is
        * built. More precisely, we build one tree per hyper-octant but we link
        * all the roots together in order to have a single tree.
        */
-      Root roots[ DigitalSetByNeighborTree::nb_sons ];
-
-    public : // TODO : this should be protected
+      Root myRoots[ DigitalSetByNeighborTree::nb_sons ];
 
       // Nodes are allocated by the tree and stored in recondary structure.
       Container myNodes;
+
+      // The number of nodes created... for debugging purpose
+      Size nb_nodes;
 
       // ------------------- static arithmetic services -----------------
       
@@ -492,15 +529,18 @@ namespace DGtal
         TypeOfSon( unsigned int aType ) : type(aType) {}
         TypeOfSon( const TypeOfSon &other ) : type( other.type ) {}
         ~TypeOfSon(){}
+
         TypeOfSon & operator=( const TypeOfSon & other ) 
           {
             type = other.type;
             return *this;
           }
+
         bool operator==( const TypeOfSon & other ) const
           {
             return type == other.type;
           }
+
         bool operator!=( const TypeOfSon & other ) const
           {
             return type != other.type;
@@ -514,18 +554,16 @@ namespace DGtal
         // Returns the value of the n-th bit
         bool getBit( int n ) const
           {
-            //return ( type & ( 1 << ( D - n - 1 ) ) );
             return ( type & ( 1 << n ) );
           }
 
         // Flips the value of the n-th bit
         void flipBit( int n )
           {
-            //type ^= ( 1 << ( D - n - 1 ) );
             type ^= ( 1 << n );
           }
 
-          
+        // display function, for debugging purpose...
         void selfDisplay( std::ostream & out, int indent = 0 ) const;
 
     public :
@@ -642,8 +680,6 @@ namespace DGtal
 
       Point getPosition() const;
 
-      void displayPos( std::ostream & out ) const;
-
 
       /**
        * Writes/Displays the object on an output stream.
@@ -658,9 +694,12 @@ namespace DGtal
     public :
         Root( ) {}
         void initRoot( unsigned int aTypeOfRoot );
-        unsigned int typeOfRoot;
         void selfDisplay( std::ostream & out, int indent = 0 ) const;
         Point getPosition() const;
+
+    private :
+        Point myPosition;
+        friend class Tree;
       };
 
 
@@ -868,7 +907,7 @@ namespace DGtal
     const Domain & myDomain;
 
     // The container storing the points of the set.
-    Tree myTree;
+    Tree * myTree;
 
     // The number of elements in the set.
     Size mySize;

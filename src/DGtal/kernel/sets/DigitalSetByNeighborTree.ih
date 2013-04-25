@@ -57,18 +57,40 @@ Tree()
   // Link the roots togheter in other to implement the two's complementary
   // notation.
   for ( unsigned int i=0; i<nb_sons; ++i ) {
-      TypeOfSon s(i);
-      roots[i].initRoot( i );
+      TypeOfSon s(i); // little binary trick, an object of class TypeOfSon is
+                      //used in order to simplify bit wise manipulations.
+      Point p;
+      myRoots[i].initRoot( i );
       for ( unsigned int j=0; j<D; ++j ) {
           bool bit = s.getBit(j);
-          s.flipBit(j);
+          p[j] = (bit) ? -1 : 0; // computes the coordinates of the root
+          s.flipBit(j); // by flipping the j-th bit, s.intValue becomes the
+                        // index of the root that is myRoots[i]'s neighbor amont
+                        // the j-th axis.
           if (!bit) 
-              roots[i].setNeighbor( (2*j)+1, &roots[ s.intValue() ] );
+              myRoots[i].setNeighbor( (2*j)+1, &myRoots[ s.intValue() ] );
           else
-              roots[i].setNeighbor( 2*j, &roots[ s.intValue() ] );
+              myRoots[i].setNeighbor( 2*j, &myRoots[ s.intValue() ] );
           s.flipBit(j);
       }
+      myRoots[i].myPosition = p;
   }
+  nb_nodes = 0;
+}
+
+//-----------------------------------------------------------------------------
+
+template <typename Domain>
+inline
+DGtal::DigitalSetByNeighborTree<Domain>::Tree::
+~Tree( )
+{
+  typename Container::iterator itEnd = myNodes.end();
+  for ( typename Container::iterator it = myNodes.begin(); 
+       it != itEnd; ++it )
+    {
+      delete *it;
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -125,6 +147,7 @@ getSon( Node * father, TypeOfSon type )
       father->sons[ id ] = new Node();
       father->sons[ id ]->initNode( father, type );
       myNodes.push_back( father->sons[ id ] );
+      ++nb_nodes;
     }
   return father->sons[ id ];
 }
@@ -141,7 +164,7 @@ selfDisplay ( std::ostream & out, int indent ) const
   indent += 2;
   for ( int i=0; i<nb_sons; ++i )
     {
-      roots[i].selfDisplay( out, indent );
+      myRoots[i].selfDisplay( out, indent );
     }
   indent -= 2;
   out << indentation(indent) << "[Tree]::end\n";
@@ -254,13 +277,13 @@ typename DGtal::DigitalSetByNeighborTree<Domain>::Root *
 DGtal::DigitalSetByNeighborTree<Domain>::Tree::
 getRoot ( const Point & p )
 {
-  TypeOfSon t;
+  TypeOfSon t;  // start from 0
   for ( int i=0; i<D; ++i )
     {
-      if ( p[i] < 0 )
+      if ( p[i] < 0 )   // flip the bits at negative coordinates.
         t.flipBit( i );
     }
-  return &roots[ t.intValue() ];
+  return &myRoots[ t.intValue() ];
 }
 
 //-----------------------------------------------------------------------------
@@ -307,6 +330,86 @@ end () const
   return myNodes.end();
 }
 
+//-----------------------------------------------------------------------------
+
+template <typename Domain>
+inline
+typename DGtal::DigitalSetByNeighborTree<Domain>::Tree::ConstIterator
+DGtal::DigitalSetByNeighborTree<Domain>::Tree::
+find( const Node * n ) const
+{
+  if ( n == NULL )
+    return end();
+  typename Container::const_iterator itEnd = myNodes.end();
+  for ( typename Container::const_iterator it = myNodes.begin();
+       it != itEnd; ++it )
+    {
+      if ( *it == n )
+        return it;
+    }
+  return end();
+}
+
+//-----------------------------------------------------------------------------
+
+template <typename Domain>
+inline
+typename DGtal::DigitalSetByNeighborTree<Domain>::Tree::Iterator
+DGtal::DigitalSetByNeighborTree<Domain>::Tree::
+find( Node * n )
+{
+  if ( n == NULL )
+    return end();
+  typename Container::iterator itEnd = myNodes.end();
+  for ( typename Container::iterator it = myNodes.begin();
+       it != itEnd; ++it )
+    {
+      if ( *it == n )
+        return it;
+    }
+  return end();
+}
+
+//-----------------------------------------------------------------------------
+
+template <typename Domain>
+inline
+typename DGtal::DigitalSetByNeighborTree<Domain>::Tree::ConstIterator
+DGtal::DigitalSetByNeighborTree<Domain>::Tree::
+find( const Point & p ) const
+{
+  Node * n = findNode ( p, false );
+  if ( ( n == NULL ) || ( ! n->inside() ) )
+    return end();
+  else 
+    return find( n );
+}
+
+//-----------------------------------------------------------------------------
+
+template <typename Domain>
+inline
+typename DGtal::DigitalSetByNeighborTree<Domain>::Tree::Iterator
+DGtal::DigitalSetByNeighborTree<Domain>::Tree::
+find( const Point & p )
+{
+  Node * n = findNode( p, false );
+  if ( ( n == NULL ) || ( ! n->inside() ) )
+    return end();
+  else
+    return find( n );
+}
+
+//-----------------------------------------------------------------------------
+
+template <typename Domain>
+inline
+typename DGtal::DigitalSetByNeighborTree<Domain>::Size
+DGtal::DigitalSetByNeighborTree<Domain>::Tree::
+size() const
+{
+  return nb_nodes;
+}
 
 // --------------------------------------------------------------------
 // ----------------------- Subclass Root ------------------------------
@@ -316,7 +419,7 @@ template <typename Domain>
 inline
 void 
 DGtal::DigitalSetByNeighborTree<Domain>::Root::
-initRoot( unsigned int aTypeOfRoot )
+initRoot( unsigned int typeOfRoot )
 {
   this->myFather = this;
   this->inTheSet = false;
@@ -324,9 +427,8 @@ initRoot( unsigned int aTypeOfRoot )
     this->neighbors[i] = NULL;
   for ( int i=0; i<nb_sons; ++i )
     this->sons[i] = NULL;
-  this->typeOfRoot = aTypeOfRoot;
-  this->myType = TypeOfSon( aTypeOfRoot );
-  this->sons[ typeOfRoot ] = this;
+  this->myType = TypeOfSon( typeOfRoot );
+  this->sons[ this->myType.intValue() ] = this;
 }
 
 
@@ -338,12 +440,7 @@ typename DGtal::DigitalSetByNeighborTree<Domain>::Point
 DGtal::DigitalSetByNeighborTree<Domain>::Root::
 getPosition( ) const
 {
-  Point p;
-  for ( int i=0; i<D; ++i )
-    {
-      p[i] = ( typeOfRoot & (1 << i) ) ? -1 : 0 ;
-    }
-  return p;
+  return myPosition;
 }
 
 
@@ -356,20 +453,14 @@ selfDisplay ( std::ostream & out, int indent ) const
 {
   out << indentation(indent) << "[Root]::start\n";
   indent += 2;
-  out << indentation(indent) << "|-> Type of root : ";
-  TypeOfSon t( typeOfRoot );
-  for ( int i=0; i<D; ++i )
-    out << t.getBit(i);
-  out << ", Coords : ";
-  this->displayPos( out );
-  out << "\n";
+  out << indentation(indent) << "|-> Position : " << getPosition() << "\n";
   out << indentation(indent) << "|-> Neighbors : ";
   for ( int i=0; i<nb_neighbors; ++i )
     {
       if ( this->neighbors[i] == NULL )
         out << "null";
       else
-        this->neighbors[i]->displayPos( out );
+        out << this->neighbors[i]->getPosition();
       out << ", ";
     }
   out << "\n";
@@ -466,38 +557,20 @@ selfDisplay ( std::ostream & out, int indent ) const
   TypeOfSon t( myType );
   for ( int i=0; i<D; ++i )
     out << t.getBit(i);
-  out << ", Coords : ";
-  this->displayPos( out );
-  out << "\n";
+  out << ", Coords : " << getPosition() << "\n";
   out << indentation(indent) << "|-> Neighbors : ";
   for ( int i=0; i<nb_neighbors; ++i )
     {
-      if ( this->neighbors[i] == NULL )
+      if ( neighbors[i] == NULL )
         out << "null";
       else
-        this->neighbors[i]->displayPos( out );
+        out << neighbors[i]->getPosition();
       out << ", ";
     }
   out << "\n";
   indent -= 2;
   out << indentation(indent) << "[Node]::end\n";
 }
-
-
-// ----------------------------------------------------------------------------
-
-template <typename Domain>
-inline
-void DGtal::DigitalSetByNeighborTree<Domain>::Node::
-displayPos ( std::ostream & out ) const
-{
-  Point p = getPosition();
-  out << "(" << p[0];
-  for ( int i=1; i<D; ++i )
-    out << "," << p[i];
-  out << ")";
-}
-
 
 
 // ----------------------------------------------------------------------------
@@ -520,7 +593,7 @@ inline
 DGtal::DigitalSetByNeighborTree<Domain>::
 ~DigitalSetByNeighborTree()
 {
-  std::cout << "Destruction ! " << std::endl;
+  delete myTree;
 }
 
 // ----------------------------------------------------------------------------
@@ -531,6 +604,7 @@ DGtal::DigitalSetByNeighborTree<Domain>::
 DigitalSetByNeighborTree( const Domain & d )
   : myDomain( d ), mySize( 0 )
 {
+  myTree = new Tree();
 }
 
 // ----------------------------------------------------------------------------
@@ -539,8 +613,12 @@ template <typename Domain>
 inline
 DGtal::DigitalSetByNeighborTree<Domain>::
 DigitalSetByNeighborTree( const DigitalSetByNeighborTree<Domain> & other )
-  : myDomain( other.myDomain ), myTree ( other.myTree  )
-{ }
+  : myDomain( other.myDomain )
+{ 
+  delete myTree;
+  myTree = new Tree();
+  insertNew( other.begin(), other.end() );
+}
 
 
 // ----------------------------------------------------------------------------
@@ -554,7 +632,9 @@ operator= ( const DigitalSetByNeighborTree<Domain> & other )
   ASSERT( ( myDomain.lowerBound() <= other.myDomain.lowerBound() )
     && ( myDomain.upperBound() >= other.myDomain.upperBound() )
     && "This domain should include the domain of the other set in case of assignment." );
-  myTree  = other.myTree ;
+  delete myTree;
+  myTree = new Tree();
+  insertNew( other.begin(), other.end() );
   return *this;
 }
 
@@ -660,7 +740,7 @@ void
 DGtal::DigitalSetByNeighborTree<Domain>::
 erase( Iterator it )
 {
-  myTree->removePoint( *it );
+  erase( *it );
 }
 
 // ------------------------------------------------------------------------
@@ -671,7 +751,10 @@ void
 DGtal::DigitalSetByNeighborTree<Domain>::
 erase( Iterator first, Iterator last )
 {
-  // TODO not implemented yet
+  for ( Iterator it = first; it != last; ++it )
+    {
+      erase( *it );
+    }
 }
 
 // ------------------------------------------------------------------------
@@ -682,7 +765,9 @@ void
 DGtal::DigitalSetByNeighborTree<Domain>::
 clear()
 {
-  //TODO not implemented yet
+  delete myTree;
+  myTree = new Tree();
+  mySize = 0;
 }
 
 // ------------------------------------------------------------------------
@@ -693,7 +778,8 @@ typename DGtal::DigitalSetByNeighborTree<Domain>::ConstIterator
 DGtal::DigitalSetByNeighborTree<Domain>::
 find( const Point & p ) const
 {
-  //TODO not implemented yet
+  typename Tree::ConstIterator it = myTree->find( p );
+  return ConstIterator( it, myTree );
 }
 
 // ------------------------------------------------------------------------
@@ -704,7 +790,8 @@ typename DGtal::DigitalSetByNeighborTree<Domain>::Iterator
 DGtal::DigitalSetByNeighborTree<Domain>::
 find( const Point & p )
 {
-  //TODO not implemented yet
+  typename Tree::Iterator it = myTree->find( p );
+  return Iterator( it, myTree );
 }
 
 // ------------------------------------------------------------------------
@@ -715,13 +802,13 @@ typename DGtal::DigitalSetByNeighborTree<Domain>::ConstIterator
 DGtal::DigitalSetByNeighborTree<Domain>::
 begin() const
 {
-  typename Tree::ConstIterator it = myTree.begin();
-  typename Tree::ConstIterator itEnd = myTree.end();
+  typename Tree::ConstIterator it = myTree->begin();
+  typename Tree::ConstIterator itEnd = myTree->end();
   while ( ( it != itEnd ) && ( ! (*it)->inside() ) )
     {
       ++it;
     }
-  return ConstIterator( it, &myTree );
+  return ConstIterator( it, myTree );
 }
 
 // ------------------------------------------------------------------------
@@ -732,7 +819,7 @@ typename DGtal::DigitalSetByNeighborTree<Domain>::ConstIterator
 DGtal::DigitalSetByNeighborTree<Domain>::
 end() const
 {
-  return ConstIterator( myTree.end(), &myTree );
+  return ConstIterator( myTree->end(), myTree );
 }
 
 // ------------------------------------------------------------------------
@@ -743,13 +830,13 @@ typename DGtal::DigitalSetByNeighborTree<Domain>::Iterator
 DGtal::DigitalSetByNeighborTree<Domain>::
 begin()
 {
-  typename Tree::Iterator it = myTree.begin();
-  typename Tree::Iterator itEnd = myTree.end();
+  typename Tree::Iterator it = myTree->begin();
+  typename Tree::Iterator itEnd = myTree->end();
   while ( ( it != itEnd ) && ( ! (*it)->inside() ) )
     {
       ++it;
     }
-  return Iterator( it, &myTree );
+  return Iterator( it, myTree );
 }
 
 // ------------------------------------------------------------------------
@@ -760,7 +847,7 @@ typename DGtal::DigitalSetByNeighborTree<Domain>::Iterator
 DGtal::DigitalSetByNeighborTree<Domain>::
 end()
 {
-  return Iterator( myTree.end(), &myTree );
+  return Iterator( myTree->end(), myTree );
 }
 
 // ------------------------------------------------------------------------
@@ -772,7 +859,7 @@ DGtal::DigitalSetByNeighborTree<Domain>::
 operator+=
 ( const DigitalSetByNeighborTree<Domain> & aSet )
 {
-  //TODO not implemented yet
+  insertNew<ConstIterator>( aSet.begin(), aSet.end() );
 }
 
 
@@ -788,9 +875,7 @@ displayAllNodes ( std::ostream & out ) const
 {
   for ( int i=0; i<nb_sons; ++i )
     {
-      out << "Tree rooted on : " << myTree.roots[i] << "\n";
-
-
+      out << "Tree rooted on : " << myTree->myRoots[i] << "\n";
     }
 }
 
@@ -802,7 +887,7 @@ void DGtal::DigitalSetByNeighborTree<Domain>::
 selfDisplay ( std::ostream & out ) const
 {
   out << "[DigitalSetByNeighborTree]::start\n";
-  myTree.selfDisplay( out, 2 );
+  myTree->selfDisplay( out, 2 );
   out << "[DigitalSetByNeighborTree]::end\n";
 }
 
