@@ -59,6 +59,9 @@
 #include "DGtal/arithmetic/ModuloComputer.h"
 //#include "DGtal/io/boards/Board2D.h"
 #include "DGtal/base/CConstSinglePassRange.h"
+#include "DGtal/kernel/SpaceND.h"
+#include "DGtal/kernel/domains/HyperRectDomain.h"
+#include "DGtal/kernel/sets/DigitalSetByNeighborTree.h"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -793,6 +796,21 @@ public:
     FreemanChain & retract(Size n = 1);
 
     
+
+    /**
+     * Computes the index of the first self-intersection of a path.
+     *
+     * @returns the index of the first intersection or 0 the path is not
+     * self-intersecting.
+     */
+    Index firstIntersection();
+
+    /**
+     * Check if a path is self-intersecting.
+     *
+     * @returns true if the path is self-intersecting, false otherwise.
+     */
+    bool isIntersecting();
 
 
 

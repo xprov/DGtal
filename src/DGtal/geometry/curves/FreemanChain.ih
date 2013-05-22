@@ -605,6 +605,59 @@ DGtal::FreemanChain<TInteger>::retract(Size n)
 
 
 
+template <typename TInteger>
+inline
+typename DGtal::FreemanChain<TInteger>::Index
+DGtal::FreemanChain<TInteger>::
+firstIntersection()
+{
+  // TODO : test this !
+  typedef SpaceND<2> SpaceType;
+  typedef HyperRectDomain<SpaceType> Domain;
+  typedef DigitalSetByNeighborTree<Domain> Set;
+  typedef Set::Direction Direction;
+  typedef Set::Iterator Iterator;
+
+  Domain dom; // the Domain is useless in this context.
+  Set s(dom);
+  Point p( 0, 0 );
+  s.insert( p );
+  Iterator it = s.find( p );
+  Index i = 0;
+  Direction d;
+  std::pair< Iterator, bool > res;
+  while( i < size() )
+    {
+      switch ( code( i ) )
+        {
+        case '0': d = Direction(  1 );  break;
+        case '1': d = Direction(  2 );  break;
+        case '2': d = Direction( -1 );  break;
+        case '3': d = Direction( -2 );  break;
+        } 
+      res = s.insertNeighbor( it, d );
+      if ( ! res.second ) // neighbor was already there
+        {
+          return i;
+        }
+      ++i;
+      it = res.first;
+    }
+  // if we're here, then there is no intersection !
+  return 0;
+}
+
+
+template <typename TInteger>
+inline
+bool
+DGtal::FreemanChain<TInteger>::
+isIntersecting()
+{
+  return ( firstIntersection() != 0 );
+}
+
+
 // ----------------------- Interface --------------------------------------
 
 

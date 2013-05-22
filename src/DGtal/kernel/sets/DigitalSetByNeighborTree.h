@@ -42,12 +42,10 @@
 #include <vector>
 #include "DGtal/base/Common.h"
 #include "DGtal/base/ExpressionTemplates.h"
+#include "DGtal/kernel/NumberTraits.h"
 //////////////////////////////////////////////////////////////////////////////
 
 
-// #define D Space::dimension
-// #define NB_SONS DigitalSetByNeighborTree<Domain>::POWER< 2, Space::dimension >::RET
-// #define NB_NEIGHBORS ( 2 * Space::dimension )
 
 namespace DGtal
 {
@@ -79,7 +77,7 @@ namespace DGtal
   template <typename TDomain>
   class DigitalSetByNeighborTree
   {
-  public:
+public :
     typedef TDomain Domain;
     typedef DigitalSetByNeighborTree<Domain> Self;
     typedef typename Domain::Space Space;
@@ -118,7 +116,7 @@ namespace DGtal
       typedef Value value_type;
       typedef Pointer pointer;
       typedef Reference reference;
-      typedef std::bidirectional_iterator_tag iterator_category;
+      typedef std::forward_iterator_tag iterator_category;
 
     public :
 
@@ -185,36 +183,13 @@ namespace DGtal
           return i;
         }
 
-      Iterator & operator-- () //préfix
-        {
-          // iterates on the nodes of the tree but consider only those that are
-          // inside the set.
-          --it;
-          typename Tree::Iterator itBegin = myTree->begin();
-          while ( ( it != itBegin ) && ( ! (*it)->inside() ) )
-            {
-              --it;
-            }
-          return *this;
-        }
-
-      Iterator operator-- ( int ) //postfix
-        {
-          Iterator i( this );
-          --it;
-          typename Tree::Iterator itBegin = myTree->begin();
-          while ( ( it != itBegin ) && ( ! (*it)->inside() ) )
-            {
-              --it;
-            }
-          return i;
-        }
-
       friend class ConstIterator;
+      friend class DigitalSetByNeighborTree;
 
     protected :
       Tree * myTree;
       typename Tree::Iterator it;
+
       };
 
     class ConstIterator
@@ -316,6 +291,8 @@ namespace DGtal
           return i;
         }
 
+      friend class DigitalSetByNeighborTree;
+
     protected :
       typename Tree::ConstIterator it;
       Tree * myTree;
@@ -328,8 +305,144 @@ namespace DGtal
 
   public :
       typedef std::vector<Node*> Container;
-      typedef typename Container::const_iterator ConstIterator;
-      typedef typename Container::iterator Iterator;
+
+      class Iterator
+        {
+
+      public :
+
+        typedef std::forward_iterator_tag iterator_category;
+
+        Iterator()
+          {
+            n = NULL;
+          } 
+
+        Iterator( Node * aNode ) 
+          {
+            n = aNode;
+            if ( n != NULL )
+              {
+                pos = n->getPosition();
+              }
+          } 
+        Iterator( const Iterator & other )
+          : n( other.n ), pos( other.pos )
+          { } 
+
+        Node * operator* () const
+          {
+            return n;
+          }
+
+        Self & operator= ( const Self & other )
+          {
+            n = other.n;
+            pos = other.pos;
+            return *this;
+          }
+
+        bool operator== ( const Iterator & other ) const
+          {
+            return ( n == other.n );
+          }
+
+        bool operator!= ( const Iterator & other ) const
+          {
+            return ( n != other.n );
+          }
+
+
+        Iterator & operator++ () //préfix
+          {
+            n = n->next( pos );
+            return *this;
+          }
+
+        Iterator operator++ ( int ) //postfix
+          {
+            Iterator i( *this );
+            n = next( pos );
+            return i;
+          }
+
+        friend class Tree::ConstIterator;
+
+      protected :
+
+        Node * n;
+        Point pos;
+        };
+
+      class ConstIterator
+        {
+
+      public :
+
+        typedef std::forward_iterator_tag iterator_category;
+
+        ConstIterator()
+          {
+            n = NULL;
+          }
+
+        ConstIterator( Node * aNode ) 
+          {
+            n = aNode;
+            if ( n != NULL )
+              {
+                pos = n->getPosition();
+              }
+          } 
+
+        ConstIterator( const ConstIterator & other )
+          : n( other.n ), pos( other.pos )
+          { } 
+
+        ConstIterator( const Tree::Iterator & other )
+          : n( other.n ), pos( other.pos )
+          { } 
+
+        const Node * operator* () const
+          {
+            return n;
+          }
+
+        Self & operator= ( const Self & other )
+          {
+            n = other.n;
+            pos = other.pos;
+            return *this;
+          }
+
+        bool operator== ( const ConstIterator & other ) const
+          {
+            return ( n == other.n );
+          }
+
+        bool operator!= ( const ConstIterator & other ) const
+          {
+            return ( n != other.n );
+          }
+
+        ConstIterator & operator++ () //préfix
+          {
+            n = n->next( pos );
+            return *this;
+          }
+
+        ConstIterator operator++ ( int ) //postfix
+          {
+            ConstIterator i( *this );
+            n = n->next( pos );
+            return i;
+          }
+
+      protected :
+
+        Node * n;
+        Point pos;
+        };
 
       // ---------------------- Standard services ------------------------------
     public :
@@ -372,8 +485,9 @@ namespace DGtal
        * Add a point p to the tree.
        *
        * @param p a point of the domain.
+       * @returns true if a new point was added, false if it was already in.
        */
-      void addPoint( const Point & p );
+      bool addPoint( const Point & p );
 
       /**
        * Remove a point p to the tree.
@@ -422,7 +536,40 @@ namespace DGtal
 
       void selfDisplay( std::ostream & out, int indent = 0 ) const;
 
+      /**
+       * Returns the number of nodes in the tree. Which is NOT the number of
+       * points in the set represented by this tree. Note also that the 2^D
+       * roots are not considered since they are statically created by the
+       * constructor.
+       *
+       * @returns the number of nodes in the tree.
+       */
       Size size() const;
+
+      /**
+       * Computes the bounding box of this set.
+       *
+       * @param lower (returns) the first point of the bounding box (lowest in
+       * all directions).
+       * @param upper (returns) the last point of the bounding box (highest in
+       * all directions).
+       */
+      void computeBoundingBox( Point & lower, Point & upper ) const;
+
+    protected :
+
+      /**
+       * Recursively computes the bounding box of this set.
+       *
+       * @param lower (returns) the first point of the bounding box (lowest in
+       * all directions).
+       * @param upper (returns) the last point of the bounding box (highest in
+       * all directions).
+       * @param n the adress of the actual node.
+       * @param position the position of the node n
+       */ 
+      void computeBoundingBoxRec( Point & lower, Point & upper, const Node * n, 
+                                  Point & position ) const;
 
     protected :
 
@@ -443,7 +590,7 @@ namespace DGtal
       
     public :
 
-      /**
+       /**
        * Return the depth of a node whose deepest coordinate is 'n'.
        * 
        * Note that the roots of the tree encode all nodes with coordinates in
@@ -463,7 +610,24 @@ namespace DGtal
        * @param p a point.
        * @returns the depth of p.
        */
-      static UnsignedInteger depth( Point p );
+      static UnsignedInteger depth( const Point & p );
+
+      /**
+       * Modify a Point in order to get to position of one of it's sons in the
+       * Tree structure.
+       *
+       * @param pos the potision of the node
+       * @type the type of the son
+       */
+      static void goDown( Point & pos, TypeOfSon type );
+
+      /**
+       * Modify a Point in order to get to position of it's father in the Tree
+       * structure
+       *
+       * @param pos the potision of the node
+       */
+      static void goUp( Point & pos );
 
       // ------------------------ Private servies -------------------
     protected :
@@ -481,7 +645,7 @@ namespace DGtal
     public :
 
       /**
-       * Tree begin() iterator.
+       * Tree begin() iterator. Always point on the node at ( 0, 0, ..., 0 .)
        *
        * @return an Iterator on the first node of a tree.
        **/
@@ -663,14 +827,38 @@ namespace DGtal
        */
       bool inside( ) const;
 
+      /**
+       * Add the point to the set.
+       */
+      void addToSet( );
+
+      /**
+       * Remove the point from the set.
+       */
+      void removeFromSet( );
+
+      /**
+       * Test the node is a root, no dynamic_cast involved.
+       * @returns true if it is a node, false otherwise.
+       */
+      bool isRoot() const;
+
+      /**
+       * Perform a postfix course of the tree.
+       *
+       * @returns a pointer to the next node.
+       */
+      Node * next( Point & pos ) const;
+
+
 
       // ------------------------- Protected Datas ------------------------------
       
     protected :
 
       Node * myFather;
-      Node * sons[ DigitalSetByNeighborTree::nb_sons ];
-      Node * neighbors[ DigitalSetByNeighborTree::nb_neighbors ];
+      Node * mySons[ DigitalSetByNeighborTree::nb_sons ];
+      Node * myNeighbors[ DigitalSetByNeighborTree::nb_neighbors ];
       bool inTheSet;
       TypeOfSon myType;
 
@@ -687,6 +875,9 @@ namespace DGtal
        */
       void selfDisplay( std::ostream & out, int indent = 0 ) const;
 
+      friend class Tree::Iterator;
+      friend class Tree::ConstIterator;
+
       };
 
     class Root : public Node
@@ -697,8 +888,9 @@ namespace DGtal
         void selfDisplay( std::ostream & out, int indent = 0 ) const;
         Point getPosition() const;
 
-    private :
+    public :
         Point myPosition;
+        Root * nextRoot;
         friend class Tree;
       };
 
@@ -749,6 +941,7 @@ namespace DGtal
      * @return 'true' iff the set is empty (no element).
      */
     bool empty() const;
+
      
     /**
      * Adds point [p] to this set.
@@ -768,6 +961,7 @@ namespace DGtal
      */
     template <typename PointInputIterator>
     void insert( PointInputIterator first, PointInputIterator last );
+
 
     /**
      * Adds point [p] to this set if the point is not already in the
@@ -875,12 +1069,47 @@ namespace DGtal
      */
     void computeBoundingBox( Point & lower, Point & upper ) const;
 
+
+    // ----------------------- Specific Set services ---------------------------
+
+    /**
+     * Check if a given neighbor of a point is in the set.
+     *
+     * @param it and iterator pointing on a point of the set.
+     * @param d a direction.
+     * @returns true if the designated neighbor is in the set, false otherwise.
+     */
+    bool isNeighborInside( Iterator it, Direction d );
+
+    /**
+     * Check if a given neighbor of a point is in the set.
+     *
+     * @param n the adress of a node of the tree.
+     * @param d a direction.
+     * @returns true if the designated neighbor is in the set, false otherwise.
+     */
+    bool isNeighborInside( Node * n, Direction d );
+
+    /**
+     * Adds the neighbor of *it, in direction d, to the set.
+     *
+     * @param it and iterator pointing on a point of the set.
+     * @returns a pair, with its member pair::first set to an iterator pointing
+     * on the designated neighbor. The pair::second element in the pair is set
+     * to true if a new point was added to the set or false if it was already
+     * in.
+     */
+    std::pair< Iterator, bool> insertNeighbor( Iterator it, Direction d );
+
+
+
+
+    // ----------------------- Static data ------------------------------------
+  public:
+
     static const int D = Space::dimension;
     static const int nb_sons = DGtal::POW< 2, D >::VALUE;
     static const int nb_neighbors = 2*D;
-
-    // ----------------------- Static arithmetic services -----------------------------
-  public:
 
 
     // ----------------------- Interface --------------------------------------

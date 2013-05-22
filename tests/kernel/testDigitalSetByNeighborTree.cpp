@@ -40,14 +40,15 @@
 
 #include "DGtal/base/Common.h"
 #include "DGtal/kernel/SpaceND.h"
+#include "DGtal/kernel/NumberTraits.h"
 #include "DGtal/kernel/domains/HyperRectDomain.h"
 #include "DGtal/kernel/sets/CDigitalSet.h"
 #include "DGtal/kernel/sets/CDigitalSetArchetype.h"
 #include "DGtal/kernel/domains/CDomain.h"
 #include "DGtal/kernel/domains/CDomainArchetype.h"
 #include "DGtal/kernel/sets/DigitalSetByNeighborTree.h"
+#include "DGtal/kernel/sets/DigitalSetBySTLSet.h"
 
-#define MAX 2147483647
 
 using namespace DGtal;
 using namespace std;
@@ -55,12 +56,18 @@ using namespace std;
 typedef SpaceND<3> SpaceType;
 typedef HyperRectDomain<SpaceType> Domain;
 typedef SpaceType::Point Point;
+typedef SpaceType::Integer Integer;
 typedef DigitalSetByNeighborTree< Domain > DS;
+typedef DigitalSetBySTLSet< Domain > DS_OTHER;
 typedef DS::Tree Tree;
 typedef DS::Node Node;
 typedef DS::Direction Direction;
 
-set< Point > all_points;
+#define MAX NumberTraits< Integer >::max()
+#define MIN NumberTraits< Integer >::min()
+
+DS_OTHER * ds_other;
+
 
 void genRandomPoints( vector<Point> & vec, int n, int max_coord )
 {
@@ -81,7 +88,7 @@ bool test_one_point( DS & ds, const Point & p )
   Node *n, *m;
 
   ds.insert( p );
-  all_points.insert( p );
+  ds_other->insert( p );
 
   // find/create node for p
   m = ds.myTree->findNode( p, false );
@@ -129,7 +136,7 @@ int test_big_points( DS & ds, int n )
     {
       Point p = *it;
       ds.insert( p );
-      all_points.insert( p );
+      ds_other->insert( p );
     }
   for ( vector<Point>::const_iterator it = v.begin();
        it != itEnd; ++it )
@@ -147,12 +154,12 @@ bool test_set_content( const DS & ds )
 {
   bool ok = true;
 
-  ok = ( ds.size() == all_points.size() );
+  ok = ( ds.size() == ds_other->size() );
 
   if ( ok )
     {
-      set< Point >::const_iterator itEnd = all_points.end();
-      for( set< Point >::const_iterator it = all_points.begin() ;
+      DS_OTHER::ConstIterator itEnd = ds_other->end();
+      for( DS_OTHER::ConstIterator it = ds_other->begin() ;
           it != itEnd; ++it )
         {
           DS::ConstIterator it_ds = ds.find( *it );
@@ -171,8 +178,8 @@ bool test_set_content( const DS & ds )
       for( DS::ConstIterator it = ds.begin() ;
           it != itEnd; ++it )
         {
-          set< Point >::const_iterator it_set = all_points.find( *it );
-          if ( ( it_set == all_points.end() ) || ( *it != *it_set ) )
+          DS_OTHER::ConstIterator it_set = ds_other->find( *it );
+          if ( ( it_set == ds_other->end() ) || ( *it != *it_set ) )
             {
               ok = false;
               break;
@@ -186,9 +193,9 @@ bool test_set_content( const DS & ds )
 bool test_node_retrival( const DS & ds )
 {
   int nb_ok = 0;
-  int nb_points = all_points.size();
-  set< Point >::const_iterator itEnd = all_points.end();
-  for( set< Point >::const_iterator it = all_points.begin() ;
+  int nb_points = ds_other->size();
+  DS_OTHER::ConstIterator itEnd = ds_other->end();
+  for( DS_OTHER::ConstIterator it = ds_other->begin() ;
       it != itEnd; ++it )
     {
       Node * n = ds.myTree->findNode( *it, false );
@@ -208,18 +215,20 @@ void usage( const char * name )
 
 int main( int argc, const char ** argv )
 {
+  srand( 42 );
 
   bool res = true;
   bool all_ok = true;
 
 
-  DGtal::int32_t t[] =  { -MAX, -MAX, -MAX };
+  DGtal::int32_t t[] =  { MIN, MIN, MIN };
   Point a ( t );
   DGtal::int32_t t2[] = { MAX, MAX, MAX };
   Point b ( t2 );
 
-  Domain dom;
+  Domain dom( a, b );
   DS ds( dom );
+  ds_other = new DS_OTHER( dom );
   
   if ( ( argc > 1 ) && ( strcmp( argv[1], "-h" ) == 0 ) )
     {
@@ -287,6 +296,24 @@ int main( int argc, const char ** argv )
       all_ok = false;
     }
 
+
+  trace.beginBlock ( "Test bounding box" );
+  Point myLower, myUpper, otherLower, otherUpper;
+  ds.computeBoundingBox( myLower, myUpper );
+  ds_other->computeBoundingBox( otherLower, otherUpper );
+  res = (myLower == otherLower) && (myUpper == otherUpper);
+  trace.endBlock();
+  if ( res )
+    {
+      trace.emphase() << "Passed." << endl;
+    }
+  else
+    {
+      trace.emphase() << "Failed." << endl;
+      cout << "moi : " << myLower << " " << myUpper << endl;
+      cout << "eux : " << otherLower << " " << otherUpper << endl;
+      all_ok = false;
+    }
 
 
 
