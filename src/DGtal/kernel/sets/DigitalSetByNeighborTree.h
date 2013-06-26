@@ -469,10 +469,10 @@ public :
       Node * getSon( Node * father, TypeOfSon type );
 
       /**
-       * Located the node representing a point p. If no such node exists in the
-       * tree then, depending on the boolean 'add' either new nodes are created
-       * in order to add the specified point to the structure, or NULL is
-       * returned.
+       * Find the node located the node representing a point p. If no such node
+       * exists in the tree then, depending on the boolean 'add' either new
+       * nodes are created in order to add the specified point to the structure,
+       * or NULL is returned.
        *
        * @param p a point of the domain.
        * @param add indicate if new nodes should be created.

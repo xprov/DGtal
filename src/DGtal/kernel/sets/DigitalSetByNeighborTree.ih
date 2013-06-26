@@ -268,7 +268,7 @@ depth( const Point & p )
   UnsignedInteger tmp;
   for ( int i=0; i<D; ++i )
     {
-      dep = max( dep, depth( p[i] ) );
+      dep = std::max( dep, depth( p[i] ) );
     }
   return dep;
 }
