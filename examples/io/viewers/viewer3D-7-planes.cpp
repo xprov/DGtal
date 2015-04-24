@@ -35,10 +35,12 @@
 #include "DGtal/base/Common.h"
 #include "DGtal/helpers/StdDefs.h"
 #include "DGtal/geometry/surfaces/COBANaivePlaneComputer.h"
+#include "DGtal/base/BasicTypes.h"
 ///////////////////////////////////////////////////////////////////////////////
 
 using namespace std;
 using namespace DGtal;
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // Standard services - public :
@@ -65,6 +67,7 @@ int main( int argc, char** argv )
   unsigned int nbok = 0;
   unsigned int nb = 0;
 
+  BigInteger bi;
   typedef COBANaivePlaneComputer<Z3, BigInteger> PlaneComputer;
   typedef PlaneComputer::Primitive Primitive;
   PlaneComputer plane;
