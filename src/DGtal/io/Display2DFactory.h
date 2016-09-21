@@ -386,6 +386,7 @@ template<Dimension dim, typename TComponent>
 template<Dimension dim, typename TComponent>
   static void drawAsGrid( DGtal::Board2D & board, const DGtal::PointVector<dim,TComponent> & );
 
+
 template<Dimension dim, typename TComponent>
   static void draw( DGtal::Board2D & board, const DGtal::PointVector<dim,TComponent> & );
 
@@ -394,6 +395,9 @@ template<Dimension dim, typename TComponent>
 	     const DGtal::PointVector<dim,TComponent> &, 
 	     const DGtal::PointVector<dim,TComponent> & );
 // PointVector
+
+
+static void draw( DGtal::Board2D & board, const DGtal::Board2D::Projector::FloatVector2D& p );
     
     
 // Preimage2D

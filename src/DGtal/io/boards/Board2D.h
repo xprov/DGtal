@@ -41,10 +41,12 @@
 //////////////////////////////////////////////////////////////////////////////
 // Inclusions
 #include <iostream>
+#include <vector>
 #include "Board/Board.h"
 #include "DGtal/base/Common.h"
 #include "DGtal/base/CountedPtr.h"
 #include "DGtal/io/Color.h"
+#include "DGtal/kernel/PointVector.h"
 //////////////////////////////////////////////////////////////////////////////
 
 
@@ -85,7 +87,79 @@ namespace DGtal
 
     typedef LibBoard::Shape Shape;
 
-    typedef double Projection[3][2];
+    /**
+     * The associated map type projections for storing the projection nD -> 2D.
+     */
+    struct Projector
+      {
+        struct FloatVector2D
+          {
+            FloatVector2D( double x, double y ) : x(x), y(y) {}
+            double x,y;
+          };
+        typedef std::vector< FloatVector2D > Projection;
+
+        Projector() : myProjections()
+        {}
+
+        ~Projector() {}
+
+        template<Dimension dim, typename TComponent>
+        FloatVector2D operator()( const DGtal::PointVector<dim,TComponent> &p )
+          {
+            const Projection prj = getProjection( dim );
+            FloatVector2D result( 0.0, 0.0 );
+            for ( int i=0; i<dim; ++i )
+              {
+                result.x += p[i]*prj[i].x;
+                result.y += p[i]*prj[i].y;
+              }
+            return result;
+          }
+
+        const Projection& getProjection( int dim ) const
+          {
+            std::map< int, Projection >::const_iterator it = myProjections.find( dim );
+            if ( it == myProjections.end() )
+              {
+              myProjections[ dim ] = buildDefaultProjection( dim );
+              return myProjections[ dim ];
+              }
+            else
+              {
+                return it->second;
+              }
+          }
+
+        void setProjection( const Projection& prj )
+          {
+            myProjections[ prj.size() ] = prj;
+          }
+
+
+        Projection buildDefaultProjection( int dim ) const
+          {
+            if ( dim < 3 )
+              {
+                FATAL_ERROR( false && "dim should be 3 or bigger for a projection in 2D" );
+              }
+            double theta = M_PI / 2.0;
+            double inc = 2.0*M_PI / dim;
+            Projection p;
+            for ( int i=0; i<dim; ++i )
+              {
+                theta += inc;
+                p.push_back( FloatVector2D( cos(theta), sin(theta) ) );
+              }
+            return p;
+            //static Projection myStatic3DProjection( { 
+            //                     FloatVector2D( -0.866025403784439, 0.5 ),
+            //                     FloatVector2D(  0.866025403784439, 0.5 ),
+            //                     FloatVector2D(  0.0, 0.5 ) } );
+          }
+
+        mutable std::map< int, Projection > myProjections;
+      };
 
     // ----------------------- Standard services ------------------------------
   public:
@@ -175,15 +249,11 @@ namespace DGtal
      * concept CDrawableWithBoard2D.
      */
     ModeMapping myModes;
+
+    Projector myProjector;
     // ------------------------- Private Datas --------------------------------
   private:
 
-  public :
-    Projection myProjection = { 
-          { -1.7320508075688772*0.5, -0.5 },
-          {  1.7320508075688772*0.5, -0.5 },
-          { 0.0, 1.0 } };
-        
 
   }; // end of class Board2D
 
@@ -429,21 +499,24 @@ namespace DGtal
   };
 
   struct SetProjection : public DrawWithBoardModifier {
-      Board2D::Projection v;
 
-      SetProjection( double xx, double xy, 
-                     double yx, double yy, 
-                     double zx, double zy )
+      SetProjection( std::initializer_list<double> l ) : myProjection()
         {
-          v[0][0] = xx; v[0][1] = xy;
-          v[1][0] = yx; v[1][1] = yy;
-          v[2][0] = zx; v[2][1] = zy;
+          auto it = l.begin();
+          while (  it != l.end() )
+            {
+              double x = *(it++);
+              double y = *(it++);
+              myProjection.push_back( Board2D::Projector::FloatVector2D( x,y ) );
+            }
         }
 
       std::string className() const 
         {
           return "SetProjection";
         }
+
+      Board2D::Projector::Projection myProjection;
 
   };
 

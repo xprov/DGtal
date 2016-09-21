@@ -58,9 +58,9 @@ int main()
   //Domain domain( p1, p3 );
   
   Board2D board( Color::White );
-  board << SetMode( p1.className(), "Projection1" );
+  board << SetMode( p1.className(), "Grid" );
   board << domain << p2 << p3 << p4 << p5 << p6 << p7;
-  board << SetProjection( -2.0,-2.0, 2.0, -2.0, 0.0, 3.0 );
+  board << SetProjection( {-3.0,-2.0, 2.0, -2.0, 0.0, 3.0} );
   board << p2 << p3 << p4 << p5 << p6 << p7;
 
 #ifdef WITH_CAIRO
