@@ -423,6 +423,7 @@ static void draw(Board2D & aBoard, const DGtal::StraightLineFrom2Points<TPoint> 
     
 static void draw( DGtal::Board2D & board, const DGtal::CustomStyle & );
 static void draw( DGtal::Board2D & board, const DGtal::SetMode & );
+static void draw( DGtal::Board2D & board, const DGtal::SetProjection & );
 
 
    /**

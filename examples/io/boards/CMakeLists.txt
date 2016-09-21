@@ -15,6 +15,7 @@ SET(DGTAL_TESTS_SRC
 if( WITH_CAIRO )
   SET(DGTAL_TESTS_SRC
     ${DGTAL_TESTS_SRC}
+    dgtalBoard2D-5-points3D
     dgtalBoard3DTo2D-0-demo-kernel-2
     dgtalBoard3DTo2D-1-points
     dgtalBoard3DTo2D-2-sets

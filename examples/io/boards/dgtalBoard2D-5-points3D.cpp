@@ -16,14 +16,14 @@
  **/
 
 /**
- * @file io/boards/dgtalBoard2D-1-points.cpp
+ * @file io/boards/dgtalBoard2D-5-points3D.cpp
  * @ingroup Examples
  * @author Jacques-Olivier Lachaud (\c jacques-olivier.lachaud@univ-savoie.fr )
  * Laboratory of Mathematics (CNRS, UMR 5807), University of Savoie, France
  *
  * @date 2010/11/26
  *
- * An example file named dgtalBoard2D-1-points.
+ * An example file named dgtalBoard2D-5-points3D.
  * 
  */
 
@@ -31,6 +31,7 @@
 #include <iostream>
 #include "DGtal/base/Common.h"
 #include "DGtal/io/boards/Board2D.h"
+#include "DGtal/io/Color.h"
 #include "DGtal/helpers/StdDefs.h"
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -44,24 +45,26 @@ int main()
 {
   trace.beginBlock ( "Example dgtalBoard2D-5-points3D" );
 
-  Point p1( -2, -2, 2 );
-  Point p2( 1, -1, 0 );
-  Point p3( 2, 2, 2 );
-  Domain domain( p1, p3 );
+  Point p1( -2, -2, -2 );
+  Point p2( 1, 0, 0 );
+  Point p3( 0, 1, 0 );
+  Point p4( 0, 0, 1 );
+  Point p5( 1, 1, 0 );
+  Point p6( 1, 0, 1 );
+  Point p7( 0, 1, 1 );
+  //Point p8( 1, 1, 1 );
+  //Point p9( 2, 2, 2 );
+  Z2i::Domain domain( Z2i::Point(-3,-3), Z2i::Point(3,3) );
+  //Domain domain( p1, p3 );
   
-  Board2D board;
+  Board2D board( Color::White );
   board << SetMode( p1.className(), "Projection1" );
-  board << domain << p1 << p2 << p3;
-
-  //board.saveSVG("dgtalBoard2D-1-points.svg");
-  //board.saveEPS("dgtalBoard2D-1-points.eps");
-  //board.saveTikZ("dgtalBoard2D-1-points.tikz");
+  board << domain << p2 << p3 << p4 << p5 << p6 << p7;
+  board << SetProjection( -2.0,-2.0, 2.0, -2.0, 0.0, 3.0 );
+  board << p2 << p3 << p4 << p5 << p6 << p7;
 
 #ifdef WITH_CAIRO
-  //board.saveCairo("dgtalBoard2D-1-points-cairo.pdf", Board2D::CairoPDF);
-  board.saveCairo("dgtalBoard2D-1-points-cairo.png", Board2D::CairoPNG);
-  //board.saveCairo("dgtalBoard2D-1-points-cairo.ps", Board2D::CairoPS);
-  //board.saveCairo("dgtalBoard2D-1-points-cairo.svg", Board2D::CairoSVG);
+  board.saveCairo("dgtalBoard2D-5-points3D.png", Board2D::CairoPNG);
 #endif
   
   trace.endBlock();

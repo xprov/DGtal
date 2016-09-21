@@ -85,6 +85,8 @@ namespace DGtal
 
     typedef LibBoard::Shape Shape;
 
+    typedef double Projection[3][2];
+
     // ----------------------- Standard services ------------------------------
   public:
     
@@ -175,6 +177,13 @@ namespace DGtal
     ModeMapping myModes;
     // ------------------------- Private Datas --------------------------------
   private:
+
+  public :
+    Projection myProjection = { 
+          { -1.7320508075688772*0.5, -0.5 },
+          {  1.7320508075688772*0.5, -0.5 },
+          { 0.0, 1.0 } };
+        
 
   }; // end of class Board2D
 
@@ -418,6 +427,27 @@ namespace DGtal
       aboard.setLineJoin( myLineJoin );
     }
   };
+
+  struct SetProjection : public DrawWithBoardModifier {
+      Board2D::Projection v;
+
+      SetProjection( double xx, double xy, 
+                     double yx, double yy, 
+                     double zx, double zy )
+        {
+          v[0][0] = xx; v[0][1] = xy;
+          v[1][0] = yx; v[1][1] = yy;
+          v[2][0] = zx; v[2][1] = zy;
+        }
+
+      std::string className() const 
+        {
+          return "SetProjection";
+        }
+
+  };
+
+
 
 } // namespace DGtal
 

@@ -1538,7 +1538,7 @@ void DGtal::Display2DFactory::draw( DGtal::Board2D & board,
            const DGtal::PointVector<dim,TComponent> & p )
 {
   std::string mode = board.getMode( p.className() );
-  FATAL_ERROR( (mode=="Paving" || mode=="Grid" || mode=="Both" || mode=="") ||
+  FATAL_ERROR( (mode=="Paving" || mode=="Grid" || mode=="Both" || mode=="" || mode=="Projection1" ) ||
     ("draw( DGtal::Board2D & board, const DGtal::PointVector<dim,TComponent> & p ): Unknown mode "+mode)==""  );
 
   if ( mode == "Paving"  || ( mode == "" )  )
@@ -1549,6 +1549,18 @@ void DGtal::Display2DFactory::draw( DGtal::Board2D & board,
     {
       drawAsPaving( board, p );
       drawAsGrid( board, p );
+    }
+  else if ( mode == "Projection1" )
+    {
+      double x = 0.0;
+      double y = 0.0;
+      x = p[0] * board.myProjection[0][0] + 
+          p[1] * board.myProjection[1][0] + 
+          p[2] * board.myProjection[2][0];
+      y = p[0] * board.myProjection[0][1] + 
+          p[1] * board.myProjection[1][1] + 
+          p[2] * board.myProjection[2][1];
+      board.fillCircle(x,y,0.2);
     }
 }
 
@@ -1668,6 +1680,18 @@ void DGtal::Display2DFactory::draw( DGtal::Board2D & board,
      const DGtal::SetMode & sm )
 {
   board.myModes[ sm.myClassname ] = sm.myMode;
+}
+
+inline
+void DGtal::Display2DFactory::draw( DGtal::Board2D & board,
+     const DGtal::SetProjection & sp )
+{
+  board.myProjection[0][0] = sp.v[0][0];
+  board.myProjection[0][1] = sp.v[0][1];
+  board.myProjection[1][0] = sp.v[1][0];
+  board.myProjection[1][1] = sp.v[1][1];
+  board.myProjection[2][0] = sp.v[2][0];
+  board.myProjection[2][1] = sp.v[2][1];
 }
 
 template <typename TSpace, typename TSequence>

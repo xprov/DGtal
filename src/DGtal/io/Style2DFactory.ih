@@ -1036,6 +1036,13 @@ DGtal::DrawableWithBoard2D* defaultStyle(const DGtal::SetMode & /*sm*/, std::str
   return 0;
 }
 
+inline
+DGtal::DrawableWithBoard2D* defaultStyle(const DGtal::SetProjection & /*sm*/, std::string mode = "" )
+{
+  boost::ignore_unused_variable_warning( mode );
+  return 0;
+}
+
 
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
