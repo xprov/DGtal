@@ -30,6 +30,7 @@
 #include <DGtal/io/colormaps/GradientColorMap.h>
 #include <DGtal/topology/CanonicSCellEmbedder.h>
 
+
 ///////////////////////////////////////////////////////////////////////////////
 // Implementation of inline methods                                          //
 
@@ -733,7 +734,7 @@ void DGtal::Display2DFactory::draw( DGtal::Board2D & board,
 {
   typedef typename DigitalSetByAssociativeContainer<Domain,Container>::ConstIterator ConstIterator;
 
-  BOOST_STATIC_ASSERT(Domain::Space::dimension == 2);
+  //BOOST_STATIC_ASSERT(Domain::Space::dimension == 2);
   for(ConstIterator it =  s.begin(); it != s.end(); ++it)
     draw(board, *it);
 }
@@ -749,13 +750,16 @@ void DGtal::Display2DFactory::draw( DGtal::Board2D & board,
   typedef typename Domain::Point Point;
   typedef typename std::vector<Point>::const_iterator ConstIterator;
 
-  if (Domain::dimension == 2)
-  {
-    for(ConstIterator it =  v.begin(); it != v.end(); ++it)
-      draw(board, *it);
-  }
-  else
-    FATAL_ERROR_MSG(false, "draw-NOT-YET-IMPLEMENTED-in-ND");
+  for(ConstIterator it =  v.begin(); it != v.end(); ++it)
+    draw(board, *it);
+
+  //if (Domain::dimension == 2)
+  //{
+  //  for(ConstIterator it =  v.begin(); it != v.end(); ++it)
+  //    draw(board, *it);
+  //}
+  //else
+  //  FATAL_ERROR_MSG(false, "draw-NOT-YET-IMPLEMENTED-in-ND");
 }
 // DigitalSetBySTLVector
 
@@ -1028,7 +1032,7 @@ void DGtal::Display2DFactory::draw( DGtal::Board2D & aBoard,
     ConstIterator itEnd ( object.end() );
     for( ; it != itEnd; ++it)
       {
-  aBoard << *it;
+        aBoard << *it;
       }
   }
 }
@@ -1054,11 +1058,8 @@ void DGtal::Display2DFactory::drawFill( DGtal::Board2D & aBoard,
     }
   aBoard.fillPolyline(aPolygon);
 }
-
-
-
-
 // GridCurve
+
 
 // SCellsRange
 template <typename TIterator, typename TSCell>
@@ -1430,16 +1431,14 @@ void DGtal::Display2DFactory::draw( DGtal::Board2D & board,
 template <typename TDigitalTopology, typename TDigitalSet>
 inline
 void DGtal::Display2DFactory::drawWithAdjacencies( DGtal::Board2D & aBoard,
-           const DGtal::Object<TDigitalTopology, TDigitalSet> & o )
+           const DGtal::Object<TDigitalTopology, TDigitalSet> & o, bool arrow )
 {
   typedef TDigitalSet DigitalSet;
   typedef typename DigitalSet::Point Point;
 
   typedef TDigitalTopology DigitalTopology;
   typedef typename DigitalSet::Domain Domain;
-  typedef
-      typename DigitalSetSelector < Domain,
-      SMALL_DS + HIGH_ITER_DS >::Type SmallSet;
+  typedef typename DigitalSetSelector < Domain, SMALL_DS + HIGH_ITER_DS >::Type SmallSet;
   typedef Object<DigitalTopology, SmallSet> SmallObject;
 
   Point p;
@@ -1447,17 +1446,20 @@ void DGtal::Display2DFactory::drawWithAdjacencies( DGtal::Board2D & aBoard,
   for (typename TDigitalSet::ConstIterator it = o.pointSet().begin();
       it != o.pointSet().end();
       ++it)
-  {
-    //Brute-force scan of the neighborhood.
-    SmallObject neig = o.properNeighborhood(*it);
-    for (typename SmallObject::DigitalSet::ConstIterator it2 = neig.pointSet().begin();
-        it2 != neig.pointSet().end();
-        ++it2)
     {
-      p = (*it2) - (*it);
-      draw(aBoard, p, (*it));
+      //Brute-force scan of the neighborhood.
+      SmallObject neig = o.properNeighborhood(*it);
+      for (typename SmallObject::DigitalSet::ConstIterator it2 = neig.pointSet().begin();
+           it2 != neig.pointSet().end();
+           ++it2)
+        {
+          p = (*it2) - (*it);
+          if (arrow)
+            drawArrow(aBoard, p, (*it));
+          else
+            drawLine(aBoard, *it, *it2 );
+        }
     }
-  }
 }
 
 template <typename TDigitalTopology, typename TDigitalSet>
@@ -1472,7 +1474,12 @@ void DGtal::Display2DFactory::draw( DGtal::Board2D & board,
     if ( mode == "DrawAdjacencies" )
     {
       draw( board, o.pointSet() );
-      drawWithAdjacencies( board, o );
+      drawWithAdjacencies( board, o, true );
+    }
+    else if ( mode == "DrawAdjacenciesNoArrow" )
+    {
+      draw( board, o.pointSet() );
+      drawWithAdjacencies( board, o, false );
     }
     else
       FATAL_ERROR(false && (("draw( DGtal::Board2D & board, const DGtal::Object<TDigitalTopology, TDigitalSet> & o ): Unknown mode " + mode) == ""));
@@ -1527,17 +1534,19 @@ inline
 void DGtal::Display2DFactory::drawAsGrid( DGtal::Board2D & board,
            const DGtal::PointVector<dim,TComponent> & p )
 {
-  FATAL_ERROR(dim == 2);
-  board.fillCircle((float) NumberTraits<TComponent>::castToDouble(p[0]),
-                   (float) NumberTraits<TComponent>::castToDouble(p[1]),0.1);
+  //FATAL_ERROR(dim == 2);
+  //board.fillCircle((float) NumberTraits<TComponent>::castToDouble(p[0]),
+  //                 (float) NumberTraits<TComponent>::castToDouble(p[1]),0.1);
+  LibBoard::Point pt2D = board.myProjector( p );
+  board.fillCircle( pt2D.x, pt2D.y, 0.1 );
 }
 
-inline
-void DGtal::Display2DFactory::draw( DGtal::Board2D & board,
-           const DGtal::Board2D::Projector::FloatVector2D& p )
-{
-  board.fillCircle( p.x, p.y, 0.2 );
-}
+//inline
+//void DGtal::Display2DFactory::draw( DGtal::Board2D & board,
+//           const LibBoard::Point& p, double r )
+//{
+//  board.fillCircle( p.x, p.y, r );
+//}
 
 template<DGtal::Dimension dim, typename TComponent>
 inline
@@ -1563,24 +1572,48 @@ void DGtal::Display2DFactory::draw( DGtal::Board2D & board,
   else 
     {
       FATAL_ERROR( ( mode=="Grid" || mode=="" ) ||
-                  ( "draw( DGtal::Board2D & board, const DGtal::PointVector<dim,TComponent> & p ): Unknown mode " + mode ) == ""  );
-
+                  ( "draw( DGtal::Board2D & board, const DGtal::PointVector<dim,TComponent> & p ): Unknown mode "+mode)==""  );
       if ( mode == "Grid"  || ( mode == "" )  )
-        draw( board, board.myProjector( p ) );
+        drawAsGrid( board, p );
     }
 }
 
 template<DGtal::Dimension dim, typename TComponent>
 inline
-void DGtal::Display2DFactory::draw( DGtal::Board2D & board,
+void DGtal::Display2DFactory::drawArrow( DGtal::Board2D & board,
           const DGtal::PointVector<dim,TComponent> & p,
           const DGtal::PointVector<dim,TComponent> & apoint )
 {
-  FATAL_ERROR(dim == 2);
+  //FATAL_ERROR(dim == 2);
+  //board.drawArrow((float)apoint[0], (float) apoint[1],
+  //    (float) apoint[0] + p[0], (float)apoint[1] + p[1],
+  //    true);
+#ifdef DEBUG_VERBOSE
+  trace.info() << "[drawArrow( board, " << p << ", " << apoint << " )]\n" ;
+#endif
+  LibBoard::Point origin = board.myProjector( apoint );
+  LibBoard::Point dest = origin + board.myProjector( p );
+  board.drawArrow( origin.x, origin.y, dest.x, dest.y, true );
 
-  board.drawArrow((float)apoint[0], (float) apoint[1],
-      (float) apoint[0] + p[0], (float)apoint[1] + p[1],
-      true);
+}
+
+template<DGtal::Dimension dim, typename TComponent>
+inline
+void DGtal::Display2DFactory::drawLine( DGtal::Board2D & board,
+          const DGtal::PointVector<dim,TComponent> & p1,
+          const DGtal::PointVector<dim,TComponent> & p2 )
+{
+  //FATAL_ERROR(dim == 2);
+  //board.drawArrow((float)apoint[0], (float) apoint[1],
+  //    (float) apoint[0] + p[0], (float)apoint[1] + p[1],
+  //    true);
+#ifdef DEBUG_VERBOSE
+  trace.info() << "[drawLine( board, " << p1 << ", " << p2 << " )]\n" ;
+#endif
+  LibBoard::Point origin = board.myProjector( p1 );
+  LibBoard::Point dest   = board.myProjector( p2 );
+  board.drawLine( origin.x, origin.y, dest.x, dest.y );
+
 }
 // PointVector
 
@@ -1669,6 +1702,26 @@ void DGtal::Display2DFactory::draw(Board2D & aBoard, const DGtal::StraightLineFr
   aBoard.drawLine(slf2p.p()[0],slf2p.p()[1],slf2p.q()[0],slf2p.q()[1]);
 }
 // StraightLineFrom2Points
+
+
+// Polyline
+template <typename TPoint>
+inline
+void DGtal::Display2DFactory::draw(Board2D & aBoard, const DGtal::Polyline<TPoint> & p)
+{
+  DGtal::Dimension dim = TPoint::size();
+  std::string mode = aBoard.getMode( p.className() );
+  std::vector<LibBoard::Point> v;
+  for ( typename DGtal::Polyline<TPoint>::const_iterator 
+       it = p.begin(), itEnd = p.end();
+       it != itEnd;
+       ++it )
+    {
+      v.push_back( aBoard.myProjector( *it ) );
+    }
+  aBoard.drawPolyline( v );
+}
+// Polyline
 
 
 //

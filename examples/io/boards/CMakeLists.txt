@@ -4,6 +4,8 @@ SET(DGTAL_TESTS_SRC
    dgtalBoard2D-3-custom-classes
    dgtalBoard2D-3-custom-points
    dgtalBoard2D-4-colormaps
+   dgtalBoard2D-5-hyperplane
+   dgtalBoard2D-6-polyline
    dgtalBoard3D-1-points
    dgtalBoard3D-2-ks
    dgtalBoard3D-6-clipping
@@ -15,7 +17,6 @@ SET(DGTAL_TESTS_SRC
 if( WITH_CAIRO )
   SET(DGTAL_TESTS_SRC
     ${DGTAL_TESTS_SRC}
-    dgtalBoard2D-5-points3D
     dgtalBoard3DTo2D-0-demo-kernel-2
     dgtalBoard3DTo2D-1-points
     dgtalBoard3DTo2D-2-sets

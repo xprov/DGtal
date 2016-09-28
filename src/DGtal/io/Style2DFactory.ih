@@ -587,6 +587,37 @@ namespace DGtal
   // StraightLineFrom2Points
 
 
+  // Polyline
+  struct DefaultDrawStyleFilled_Polyline : public DrawableWithBoard2D
+  {
+    virtual void setStyle( Board2D & aBoard ) const
+    {
+      aBoard.setFillColorRGBi( 100, 100, 255, 128 );
+      aBoard.setPenColor( DGtal::Color::None );
+    }
+  };
+  struct DefaultDrawStyleTransparent_Polyline : public DrawableWithBoard2D
+  {
+    virtual void setStyle( Board2D & aBoard ) const
+    {
+      aBoard.setPenColorRGBi( 0, 0, 255 );
+      aBoard.setFillColor( DGtal::Color::None );
+      aBoard.setLineStyle( Board2D::Shape::SolidStyle );
+      aBoard.setLineWidth( 3 );
+    }
+  };
+  struct DefaultDrawStyleBoth_Polyline : public DrawableWithBoard2D
+  {
+    virtual void setStyle( Board2D & aBoard ) const
+    {
+      aBoard.setPenColorRGBi( 0, 0, 200, 255 );
+      aBoard.setFillColorRGBi( 0, 0, 255, 128 );
+      aBoard.setLineStyle( Board2D::Shape::SolidStyle );
+      aBoard.setLineWidth( 3 );
+    }
+  };
+  // Polyline
+
 }
 
 
@@ -1018,6 +1049,23 @@ defaultStyle( const DGtal::LatticePolytope2D<TSpace,TSequence> & /*cip*/,
     return new DGtal::DefaultDrawStyleFilled_LatticePolytope2D;
 }
 // LatticePolytope2D
+
+
+// Polyline
+template <typename TPoint>
+inline
+DGtal::DrawableWithBoard2D*
+defaultStyle( const DGtal::Polyline<TPoint> & /*cip*/,
+             std::string mode = "" )
+{
+  if ( mode == "Edges" )
+    return new DGtal::DefaultDrawStyleTransparent_Polyline;
+  else if ( mode == "Fill" ) 
+    return new DGtal::DefaultDrawStyleFilled_Polyline;
+  else if ( mode == "Both" || mode == "" )
+    return new DGtal::DefaultDrawStyleBoth_Polyline;
+}
+// Polyline
 
 //
 

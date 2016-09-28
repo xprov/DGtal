@@ -92,38 +92,41 @@ namespace DGtal
      */
     struct Projector
       {
-        struct FloatVector2D
-          {
-            FloatVector2D( double x, double y ) : x(x), y(y) {}
-            double x,y;
-          };
-        typedef std::vector< FloatVector2D > Projection;
+        typedef std::vector< LibBoard::Point > Projection;
 
-        Projector() : myProjections()
+        Projector() 
         {}
 
         ~Projector() {}
 
         template<Dimension dim, typename TComponent>
-        FloatVector2D operator()( const DGtal::PointVector<dim,TComponent> &p )
+        void projectPoint( double& x, double& y, const DGtal::PointVector<dim,TComponent>& p )
           {
             const Projection prj = getProjection( dim );
-            FloatVector2D result( 0.0, 0.0 );
+            x = y = 0.0;
             for ( int i=0; i<dim; ++i )
               {
-                result.x += p[i]*prj[i].x;
-                result.y += p[i]*prj[i].y;
+                x += prj[i].x * NumberTraits<TComponent>::castToDouble( p[i] );
+                y += prj[i].y * NumberTraits<TComponent>::castToDouble( p[i] );
               }
+            //trace.info() << "Projected " << p << " --> (" << x << "," << y << ")\n";
+          }
+
+        template<Dimension dim, typename TComponent>
+        LibBoard::Point operator()( const DGtal::PointVector<dim,TComponent>& p )
+          {
+            LibBoard::Point result( 0.0, 0.0 );
+            projectPoint( result.x, result.y, p );
             return result;
           }
 
-        const Projection& getProjection( int dim ) const
+        const Projection& getProjection( Dimension dim ) const
           {
             std::map< int, Projection >::const_iterator it = myProjections.find( dim );
             if ( it == myProjections.end() )
               {
-              myProjections[ dim ] = buildDefaultProjection( dim );
-              return myProjections[ dim ];
+                myProjections[ dim ] = defaultProjection( dim );
+                return myProjections[ dim ];
               }
             else
               {
@@ -137,25 +140,35 @@ namespace DGtal
           }
 
 
-        Projection buildDefaultProjection( int dim ) const
+        static Projection defaultProjection( Dimension dim ) 
           {
-            if ( dim < 3 )
-              {
-                FATAL_ERROR( false && "dim should be 3 or bigger for a projection in 2D" );
-              }
-            double theta = M_PI / 2.0;
-            double inc = 2.0*M_PI / dim;
             Projection p;
-            for ( int i=0; i<dim; ++i )
+            if ( dim % 2 == 1 )
               {
-                theta += inc;
-                p.push_back( FloatVector2D( cos(theta), sin(theta) ) );
+                double theta = M_PI/2.0;
+                double inc = 2.0*M_PI/dim;
+                for ( int i=0; i<dim; ++i )
+                  {
+                    theta += inc;
+                    p.push_back( LibBoard::Point( cos(theta), sin(theta) ) );
+                  }
+              }
+            else
+              {
+                p.push_back( LibBoard::Point( 1.0, 0.0 ) );
+                double theta = M_PI/dim;
+                double inc = 2*M_PI/dim;
+                for ( int i=1; i<dim; ++i )
+                  {
+                    p.push_back( LibBoard::Point( cos(theta), sin(theta) ) );
+                    theta += inc;
+                    if ( i == dim/2 )
+                      {
+                        theta += inc/2;
+                      }
+                  }
               }
             return p;
-            //static Projection myStatic3DProjection( { 
-            //                     FloatVector2D( -0.866025403784439, 0.5 ),
-            //                     FloatVector2D(  0.866025403784439, 0.5 ),
-            //                     FloatVector2D(  0.0, 0.5 ) } );
           }
 
         mutable std::map< int, Projection > myProjections;
@@ -500,14 +513,55 @@ namespace DGtal
 
   struct SetProjection : public DrawWithBoardModifier {
 
-      SetProjection( std::initializer_list<double> l ) : myProjection()
+      SetProjection( Dimension dim, std::initializer_list<double> l ) : dim(dim), myProjection()
+      {
+        ASSERT( 2*dim == l.size() );
+        init( l );
+      }
+
+      SetProjection( std::initializer_list<double> l ) : dim( l.size()/2 ), myProjection()
+      {
+        init( l );
+      }
+      SetProjection( Dimension dim, std::initializer_list< LibBoard::Point > l ) : dim(dim), myProjection()
+      {
+        ASSERT( dim == l.size() );
+        init( l );
+      }
+
+      SetProjection( std::initializer_list< LibBoard::Point > l ) : dim( l.size() ), myProjection()
+      {
+        init( l );
+      }
+
+      void init( std::initializer_list<double> l ) 
         {
-          auto it = l.begin();
-          while (  it != l.end() )
+          auto it = l.begin(), itEnd = l.end();
+          while (  it != itEnd )
             {
               double x = *(it++);
               double y = *(it++);
-              myProjection.push_back( Board2D::Projector::FloatVector2D( x,y ) );
+              myProjection.push_back( LibBoard::Point( x,y ) );
+            }
+        }
+
+      void init( std::initializer_list< LibBoard::Point > l ) 
+        {
+          for ( auto it = l.begin(), itEnd = l.end(); it != itEnd; ++it )
+            {
+              myProjection.push_back( *it );
+            }
+        }
+
+      SetProjection( Dimension dim, std::string name )
+        {
+          if ( name == "default" || name == "" )
+            {
+              myProjection = Board2D::Projector::defaultProjection( dim );
+            }
+          else
+            {
+              FATAL_ERROR( ("SetProjection( Dimension dim, std::string name ): Unknown name "+name)==""  );
             }
         }
 
@@ -516,7 +570,9 @@ namespace DGtal
           return "SetProjection";
         }
 
+      Dimension dim;
       Board2D::Projector::Projection myProjection;
+
 
   };
 

@@ -61,6 +61,7 @@
 #include "DGtal/geometry/curves/StabbingLineComputer.h"
 #include "DGtal/geometry/curves/StabbingCircleComputer.h"
 #include "DGtal/geometry/curves/FrechetShortcut.h"
+#include "DGtal/geometry/curves/Polyline.h"
 #include "DGtal/kernel/domains/HyperRectDomain.h"
 #include "DGtal/images/ImageContainerByHashTree.h"
 #include "DGtal/images/ImageContainerBySTLVector.h"
@@ -365,7 +366,7 @@ template < Dimension dim, typename TInteger >
     
 // Object
 template <typename TDigitalTopology, typename TDigitalSet>
-  static void drawWithAdjacencies( DGtal::Board2D & aBoard, const DGtal::Object<TDigitalTopology, TDigitalSet> & );
+  static void drawWithAdjacencies( DGtal::Board2D & aBoard, const DGtal::Object<TDigitalTopology, TDigitalSet> &, bool arrow );
 
 template <typename TDigitalTopology, typename TDigitalSet>
   static void draw( DGtal::Board2D & board, const DGtal::Object<TDigitalTopology, TDigitalSet> & );
@@ -391,13 +392,18 @@ template<Dimension dim, typename TComponent>
   static void draw( DGtal::Board2D & board, const DGtal::PointVector<dim,TComponent> & );
 
 template<Dimension dim, typename TComponent>
-  static void draw( DGtal::Board2D & board, 
+  static void drawArrow( DGtal::Board2D & board, 
+	     const DGtal::PointVector<dim,TComponent> &, 
+	     const DGtal::PointVector<dim,TComponent> & );
+
+template<Dimension dim, typename TComponent>
+  static void drawLine( DGtal::Board2D & board, 
 	     const DGtal::PointVector<dim,TComponent> &, 
 	     const DGtal::PointVector<dim,TComponent> & );
 // PointVector
 
 
-static void draw( DGtal::Board2D & board, const DGtal::Board2D::Projector::FloatVector2D& p );
+static void draw( DGtal::Board2D & board, const LibBoard::Point& p, double r=0.1 );
     
     
 // Preimage2D
@@ -420,6 +426,12 @@ template < Dimension dim, typename TInteger >
 template <typename TPoint>
 static void draw(Board2D & aBoard, const DGtal::StraightLineFrom2Points<TPoint> & );
 // StraightLineFrom2Points
+    
+// StraightLineFrom2Points
+template <typename TPoint>
+static void draw(Board2D & aBoard, const DGtal::Polyline<TPoint> & );
+// StraightLineFrom2Points
+  
   
     
 //
