@@ -1,0 +1,263 @@
+/**
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Lesser General Public License as
+ *  published by the Free Software Foundation, either version 3 of the
+ *  License, or  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ **/
+
+/**
+ * @file Polyline.ih
+ * @author Tristan Roussillon (\c
+ * tristan.roussillon@liris.cnrs.fr ) Laboratoire d'InfoRmatique en
+ * Image et Systèmes d'information - LIRIS (CNRS, UMR 5205), CNRS,
+ * France
+ *
+ *
+ * @date 2011/06/27
+ *
+ * @brief Implementation of inline methods defined in Polyline.h
+ *
+ * This file is part of the DGtal library.
+ */
+
+///////////////////////////////////////////////////////////////////////////////
+// IMPLEMENTATION of inline methods.
+///////////////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////
+#include <cstdlib>
+#include <iostream>
+#include <sstream>
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename TPoint>
+DGtal::Polyline<TPoint>::~Polyline()
+{
+}
+
+template <typename TPoint>
+DGtal::Polyline<TPoint>::Polyline()
+{
+}
+
+template <typename TPoint>
+DGtal::Polyline<TPoint>::Polyline( const Polyline<Point> & aOther )
+  : myPoints( aOther.myPoints )
+{
+}
+
+template <typename TPoint>
+typename DGtal::Polyline<TPoint> & 
+DGtal::Polyline<TPoint>::operator=( const Polyline<Point> & aOther )
+{
+  myPoints = aOther.myPoints;
+  return *this;
+}
+
+template <typename TPoint>
+inline
+bool
+DGtal::Polyline<TPoint>::isValid() const
+{
+  return true;
+}
+
+
+template <typename TPoint>
+inline
+void
+DGtal::Polyline<TPoint>::initFromPointsVector( const std::vector<Point>& aVectorOfPoints )  
+{
+  myPoints = aVectorOfPoints;
+}
+
+
+//------------------------------------------------------------------------------
+
+template <typename TPoint>
+inline
+void
+DGtal::Polyline<TPoint>::initFromVectorStream(std::istream & in ) 
+{
+  myPoints = PointListReader<Point>::getPointsFromInputStream(in);
+}
+
+template <typename TPoint>
+inline
+void
+DGtal::Polyline<TPoint>::writeVectorToStream( std::ostream & out ) const
+{
+  for (const_iterator it = myPoints.begin(), 
+       itEnd = myPoints.end(); 
+       it != itEnd; ++it) 
+    {
+      Point p = *it;
+      out << p[0];
+      for (unsigned int k = 0; k < Point::dimension; ++k) 
+        {
+          out << " " << p[k];
+        }
+      out << '\n';
+    }  
+}
+
+//------------------------------------------------------------------------------
+
+template <typename TPoint>
+inline
+bool
+DGtal::Polyline<TPoint>::isClosed() const
+{
+  if ( size() > 0 )
+    {
+      Point first = myPoints[0];
+      Point last = back();
+      return ( first == back );
+    }
+  else
+    {
+      return true; // by definition
+    }
+}
+
+template <typename TPoint>
+inline
+bool
+DGtal::Polyline<TPoint>::isOpen() const
+{
+  return (! isClosed() );
+}
+
+//------------------------------------------------------------------------------
+template <typename TPoint>
+inline
+typename DGtal::Polyline<TPoint>::ConstIterator
+DGtal::Polyline<TPoint>::begin() const
+{
+  return myPoints.begin(); 
+}
+
+template <typename TPoint>
+inline
+typename DGtal::Polyline<TPoint>::ConstIterator
+DGtal::Polyline<TPoint>::end() const
+{
+  return myPoints.end(); 
+}
+
+template <typename TPoint>
+inline
+typename DGtal::Polyline<TPoint>::ConstReverseIterator
+DGtal::Polyline<TPoint>::rbegin() const
+{
+  return myPoints.rbegin(); 
+}
+
+template <typename TPoint>
+inline
+typename DGtal::Polyline<TPoint>::ConstReverseIterator
+DGtal::Polyline<TPoint>::rend() const
+{
+  return myPoints.rend(); 
+}
+
+template <typename TPoint>
+inline
+typename DGtal::Polyline<TPoint>::Point
+DGtal::Polyline<TPoint>::back() const
+{
+  return myPoints.back(); 
+}
+
+template <typename TPoint>
+inline
+void
+DGtal::Polyline<TPoint>::push_back( const Point& aPoint )
+{
+  pushBack(aPoint); 
+}
+
+template <typename TPoint>
+inline
+void
+DGtal::Polyline<TPoint>::pushBack( const Point& aPoint )
+{
+  myPoints.push_back(aPoint); 
+}
+
+template <typename TPoint>
+inline
+typename DGtal::Polyline<TPoint>::Storage::size_type
+DGtal::Polyline<TPoint>::size() const
+{
+  return myPoints.size(); 
+}
+
+template <typename TPoint>
+inline
+const typename DGtal::Polyline<TPoint>::Storage& 
+DGtal::Polyline<TPoint>::getPoints() const
+{
+  return myPoints;
+}
+
+//------------------------------------------------------------------------------
+
+template <typename TPoint>
+inline
+void
+DGtal::Polyline<TPoint>::selfDisplay ( std::ostream & out ) const
+{
+  out << "[" << className() << "]" << std::endl;
+  for(unsigned int i=0; i< myPoints.size(); i++){
+    out << myPoints.at(i) << " ";
+  }
+  out << std::endl; 
+}
+
+//------------------------------------------------------------------------------
+template <typename TPoint>
+inline
+std::string
+DGtal::Polyline<TPoint>::className() const
+{
+  std::stringstream ss;
+  ss << "Polyline" << TPoint::size() << 'D';
+  return ss.str();
+}
+
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Implementation of inline functions and external operators                 //
+
+template <typename TPoint>
+inline
+std::ostream&
+DGtal::operator<< ( std::ostream & out,
+      const DGtal::Polyline<TPoint> & aObject )
+{
+  aObject.selfDisplay ( out );
+  return out;
+}
+
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+
+
