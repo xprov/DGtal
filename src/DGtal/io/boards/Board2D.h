@@ -143,30 +143,21 @@ namespace DGtal
         static Projection defaultProjection( Dimension dim ) 
           {
             Projection p;
-            if ( dim % 2 == 1 )
+            double theta, inc;
+            if ( dim % 2 == 0 )
               {
-                double theta = M_PI/2.0;
-                double inc = 2.0*M_PI/dim;
-                for ( int i=0; i<dim; ++i )
-                  {
-                    theta += inc;
-                    p.push_back( LibBoard::Point( cos(theta), sin(theta) ) );
-                  }
+                theta = 0.0;
+                inc = M_PI / dim;
               }
             else
               {
-                p.push_back( LibBoard::Point( 1.0, 0.0 ) );
-                double theta = M_PI/dim;
-                double inc = 2*M_PI/dim;
-                for ( int i=1; i<dim; ++i )
-                  {
-                    p.push_back( LibBoard::Point( cos(theta), sin(theta) ) );
-                    theta += inc;
-                    if ( i == dim/2 )
-                      {
-                        theta += inc/2;
-                      }
-                  }
+                inc = 2.0*M_PI / dim;
+                theta = M_PI / 2 + inc;
+              }
+            for ( DGtal::Dimension i=0; i<dim; ++i )
+              {
+                p.push_back( LibBoard::Point( cos(theta), sin(theta) ) );
+                theta += inc;
               }
             return p;
           }

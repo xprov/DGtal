@@ -391,6 +391,23 @@ template<Dimension dim, typename TComponent>
 template<Dimension dim, typename TComponent>
   static void draw( DGtal::Board2D & board, const DGtal::PointVector<dim,TComponent> & );
 
+/**
+ * For retrocompatibility, by default, method draw called on two points produces
+ * an arrow.
+ * New code should use ``drawArrow`` or ``drawLine``.
+ */
+template<Dimension dim, typename TComponent>
+  static void draw( DGtal::Board2D & board, 
+	     const DGtal::PointVector<dim,TComponent> &p, 
+	     const DGtal::PointVector<dim,TComponent> &q,
+         bool arrow = true )
+    {
+      if ( arrow )
+        drawArrow( board, p, q );
+      else
+        drawLine( board, p, q );
+    }
+
 template<Dimension dim, typename TComponent>
   static void drawArrow( DGtal::Board2D & board, 
 	     const DGtal::PointVector<dim,TComponent> &, 

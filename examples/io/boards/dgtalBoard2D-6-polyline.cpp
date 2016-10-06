@@ -49,27 +49,23 @@ void DisplaySurfels( Board2D& board, TPoint startPoint )
   typedef TPoint Point;
   typedef Polyline<Point> Poly;
 
-  const Dimension dim = Point::size();
-
-  for ( int i=0; i<dim; ++ i )
+  int dim = static_cast<int>( Point::size() );
+  if ( dim % 2 == 0 )
     {
-      Poly p;
-      Point pt = startPoint;
-      p.push_back( pt );
-      pt[i] += dim+1;
-      p.push_back( pt );
-      board << p;
-    }
-  for ( int i=0; i<dim-1; ++i )
-    {
-      for ( int j=i+1; j<dim; ++j )
+      for ( int k=0; k<2*dim; ++k )
         {
+          int i,j,sizei, sizej;
+          i = k % dim;
+          j = (k+1) % dim; 
+          sizei = ( k < dim ) ? dim : -dim;
+          sizej = ( k+1 < dim || k+1 == 2*dim ) ? dim : -dim;
           Poly p;
           Point p0,p1,p2,p3;
           p0 = p1 = p2 = p3 = startPoint;
-          p1[i] += dim;
-          p2[i] += dim; p2[j] += dim;
-          p3[j] += dim;
+          p1[i] += sizei;
+          p2[i] += sizei; 
+          p2[j] += sizej;
+          p3[j] += sizej;
           p.push_back( p0 );
           p.push_back( p1 );
           p.push_back( p2 );
@@ -78,9 +74,34 @@ void DisplaySurfels( Board2D& board, TPoint startPoint )
           board << p;
         }
     }
+  else
+    {
+      for ( int k=0; k<dim; ++k )
+        {
+          int i,j,sizei, sizej;
+          i = k;
+          j = (k+1) % dim; 
+          sizei = dim;
+          sizej = dim;
+          Poly p;
+          Point p0,p1,p2,p3;
+          p0 = p1 = p2 = p3 = startPoint;
+          p1[i] += sizei;
+          p2[i] += sizei; 
+          p2[j] += sizej;
+          p3[j] += sizej;
+          p.push_back( p0 );
+          p.push_back( p1 );
+          p.push_back( p2 );
+          p.push_back( p3 );
+          p.push_back( p0 );
+          board << p;
+        }
+    }
+
 }
 
-int main( int argc, const char** argv )
+int main()
 {
   typedef PointVector<2,int> Point2D;
   typedef PointVector<3,int> Point3D;
@@ -120,8 +141,8 @@ int main( int argc, const char** argv )
   Point3D p3d( {0,10,5} );
   Point4D p4d( {25,0,0,0} );
   Point5D p5d( {0,10,10,0,0} );
-  Point6D p6d( {25,0,0,0,10,10} );
-  Point7D p7d( {0,0,20,20,0,0,0} );
+  Point6D p6d( {25,0,0,-13,-10,0} );
+  Point7D p7d( {0,0,25,20,0,0,0} );
 
   DisplaySurfels( aBoard, p2d );
   DisplaySurfels( aBoard, p3d );
